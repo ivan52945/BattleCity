@@ -265,3 +265,5 @@ __attribute__((aligned(32))) uint16_t tank_enemy_frames[SIDES][T_FRMS_N][TANK_FR
 __attribute__((aligned(32))) uint16_t shell_frames[SHEL_FRAME_S] = {
   0xFFFF, 0xFFFF, 0xFFFF,
 };
+
+__attribute__((aligned(32))) uint16_t img_clear[TANK_FRAME_S];
