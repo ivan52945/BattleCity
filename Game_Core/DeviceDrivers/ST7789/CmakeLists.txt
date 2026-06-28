@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 3.22)
+
+SET(SRC Src)
+SET(INC Inc)
+
+SET(TARGET_LIB ST7789)
+
+add_library(${TARGET_LIB} STATIC)
+
+target_sources(${TARGET_LIB} PRIVATE
+    ${SRC}/fonts.c
+    ${SRC}/st7789.c)
+
+target_include_directories(${TARGET_LIB} PUBLIC ${INC})
+
+target_link_libraries(${TARGET_LIB} PRIVATE
+    stm32cubemx)
