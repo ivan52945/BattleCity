@@ -93,7 +93,7 @@ int main(void)
   MX_SPI1_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  game_init();
+  Game game = Game();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -102,7 +102,7 @@ int main(void)
   {
     HAL_Delay(15);
 
-    game_loop();
+    game.loop();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

@@ -16,6 +16,8 @@ target_sources(${GAME_CORE} PRIVATE
 
 target_include_directories(${GAME_CORE} PUBLIC ${INC})
 
+target_link_libraries(${GAME_CORE} PUBLIC
+    utils)
+
 target_link_libraries(${GAME_CORE} PRIVATE
-    utils
     display)

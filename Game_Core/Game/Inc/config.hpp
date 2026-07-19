@@ -3,7 +3,7 @@
 #include "point.hpp"
 #include "display.hpp"
 
-#define FIELD_WIDTH DISPLAY_W
+#define FIELD_WIDTH  DISPLAY_W
 #define FIELD_HEIGHT DISPLAY_H
 
 constexpr point_t tank_spawns[2][7] = {
