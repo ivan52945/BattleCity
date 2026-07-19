@@ -23,17 +23,19 @@ public:
   int life = 2;
   bool shot_st = false;
 
+  Tank();
+
   Tank(int x, int y, int dir, int side);
 
-  void move();
-  void update();
+  void move(int fld_x_end, int fld_y_end);
+  void update(int fld_x_end, int fld_y_end);
   bool isShot();
   void back(bool stuck = false);
   void shot(Shell &shell) const;
   void setSide(int side);
-  void kill() const;
+  bool kill() const;
   void rotate(int new_dir);
-  void respawn(int x, int y);
+  void respawn(int x, int y, int side);
 
   ~Tank();
 };

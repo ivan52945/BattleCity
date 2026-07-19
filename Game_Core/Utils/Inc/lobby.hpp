@@ -1,35 +1,32 @@
 #pragma once
+#include <cstdint>
+
+template <typename T>
+void swap_pointers(T*& a, T*& b) {
+    auto x = reinterpret_cast<uintptr_t>(a);
+    auto y = reinterpret_cast<uintptr_t>(b);
+
+    x ^= y; // x = a ^ b
+    y ^= x; // y = b ^ (a ^ b) = a
+    x ^= y; // x = (a ^ b) ^ a = b
+
+    a = reinterpret_cast<T*>(x);
+    b = reinterpret_cast<T*>(y);
+}
 
 template <typename T, int N>
 class Lobby
 {
     int current = 0;
-    int r_current = 0;
-    bool is_sleep = false;
     int n_active = 0;
-    T* items[N + 1] = {};
+    bool is_sleep = false;
+    T* items[N] = {};
+    T entities[N] = {};
 public:
-    Lobby() = default;
-
-    Lobby(T items_add[], const int n)
-    {
-        load(items_add, n);
-    }
-
-    void load(T items_add[], int n)
-    {
-        n = (n <= N) ? n : N;
-
-        for (int i = 0; i < n; ++i)
-            items[i + 1] = &items_add[i];
-
-        n_active = 0;
-    }
-
-    void clear()
+    Lobby()
     {
         for (int i = 0; i < N; ++i)
-            items[i] = nullptr;
+            items[i] = &entities[i];
 
         n_active = 0;
     }
@@ -41,44 +38,38 @@ public:
         return items[0];
     }
 
+    bool is_nEnd() const
+    {
+        return current < n_active;
+    }
+
     T* next()
     {
         current += (is_sleep) ? 0 : 1;
 
         is_sleep = false;
 
-        current = (current < n_active) ? current : n_active;
-
         return items[current];
     }
 
-    T** r_start()
+    T* operator[](size_t i)
     {
-        return &items[0];
-    }
-
-    T *item(int i)
-    {
-        return (i < n_active) ? items[i] : nullptr;
+        return items[i];
     }
 
     T* activate()
     {
-        if (n_active >= N)
+        if (n_active > N)
             return nullptr;
 
         is_sleep = false;
 
-        T* activated = items[++n_active];
-        items[n_active - 1] = activated;
-        items[n_active] = nullptr;
-
-        return activated;
+        return items[n_active++];
     }
 
     T *sleep()
     {
-        return (n_active >= N) ? nullptr : items[n_active + 1];
+        return (n_active > N) ? nullptr : items[n_active];
     }
 
     int active_n() const
@@ -88,7 +79,7 @@ public:
 
     int sleep_n() const
     {
-        return N-n_active;
+        return N - n_active;
     }
 
     void lull()
@@ -96,10 +87,13 @@ public:
         if (n_active < 1)
             return;
 
-        is_sleep = true;
+        n_active -= 1;
 
-        items[n_active] = items[current];
-        items[current] = items[--n_active];
-        items[n_active] = nullptr;
+        if (current >=  n_active)
+            return;
+
+        swap_pointers(items[current], items[n_active]);
+
+        is_sleep = true;
     }
 };

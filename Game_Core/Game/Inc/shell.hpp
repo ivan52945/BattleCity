@@ -2,7 +2,6 @@
 
 #include "assets.hpp"
 #include "entity.hpp"
-#include "config.hpp"
 
 #define SHELL_LENGTH 3
 
@@ -15,8 +14,8 @@ public:
 
   Shell(int x, int y, int dir, int side);
 
-  void move();
-  void update();
+  void move(int fld_x_end, int fld_y_end);
+  void update(int fld_x_end, int fld_y_end);
 
   void get_out(int x, int y, int dir, int side);
   void explode();

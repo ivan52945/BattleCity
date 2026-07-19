@@ -12,7 +12,7 @@ Shell::Shell(const int x, const int y, const int dir, const int side) : Entity(x
   frame = &shell_frames[0];
 }
 
-void Shell::move()
+void Shell::move(const int fld_x_end, const int fld_y_end)
 {
   switch (dir) {
     case UP:
@@ -31,25 +31,26 @@ void Shell::move()
       break;
   }
 
+  const int l_hlf = h / 2;
 
-  if (x < 1) {
+  if (x < l_hlf) {
     life = false;
   }
-  else if (x > (FIELD_WIDTH - 1 - w / 2)) {
+  else if (x > (fld_x_end - l_hlf)) {
     life = false;
   }
 
-  if (y < 1) {
+  if (y < l_hlf) {
     life = false;
   }
-  else if (y > (FIELD_HEIGHT - 1 - (h / 2))) {
+  else if (y > (fld_y_end - l_hlf)) {
     life = false;
   }
 }
 
-void Shell::update()
+void Shell::update(const int fld_x_end, const int fld_y_end)
 {
-  move();
+  move(fld_x_end, fld_y_end);
 
   if (!life)
     clear();
