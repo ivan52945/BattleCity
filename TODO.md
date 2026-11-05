@@ -1,0 +1,77 @@
+# BattleCity — Backlog
+
+Рабочий список оптимизаций и чисток проекта. Отмечено: `[x]` — сделано, `[ ]` — ждёт.
+Пункты, затрагивающие **Platform** (`Platforms/STM32F401/`, генерируется CubeMX), внедряются только по явному согласию.
+
+## Сделано в этой сессии
+
+- [x] **Несколько `Game` на разных панелях.** `Game::disp` static → поле (ctor — init-list); `Entity::disp` static → поле (+4 B × 116 слотов ≈ **+464 B RAM**; `Game` в main — на стеке, значит и дельта на стеке). Штамп — один раз из `Game::init()` через `Lobby::set_disp()`: пул реализует сущности переиспользованием слотов (respawn/get_out), не реконструкцией, поэтому одного штампа хватает на всю жизнь скота; в `lobby.hpp` — forward-declare `Disp_Iface`, include не притащен. `game_i` из static в `loop()` → поле (иначе две игры делили бы один счётчик кадров — анимации поехали бы). Девиртуализация (пункт G) не затронута: источник указателя не влияет на LTO-цепочку `&lcd → Game::disp → slot.disp`; проверка всё так же по `objdump -d`.
+- [x] Переезд на классы: драйвер `ST7789` реализует `Disp_Iface`; объект создаёт `main()`, инжектирует в `Game(Disp_Iface*)`; geometрия поля — из `disp->width()/height()` в `Game::init()`.
+- [x] `Entity::print()/clear()` идут напрямую через `Disp_Iface` (статический `Entity::disp` + `disp->print_img(...)`); trampoline `Game::print_img` и `print_fn` удалены — цепочка blit с двумя косвенностями свелась к одной виртуальной.
+- [x] Спрайты в flash: все 4 массива `assets.cpp` стали `const` (`entity.frame`, `tank.frame_buff*` — уже `const uint16_t*`). Ожидаемо **−6 016 B RAM**, +~376 B flash. DMA читает flash напрямую — штатно на F4.
+- [x] `st7789_wiring` (designated initializers, C++20): опциональные пины (CS/RST не заведены → поле просто не указывается, guard'ы `if (CS_Port)`, `if (RST_Port)` в `init()`).
+- [x] Удалено: старая C-прокладка `Display/display.*`, конфиг-макросный `st7789.h`, `dir.hpp` (`side_t` теперь живёт в `entity.hpp`), дубликат платформы `Game_Core/Platforms/` (116 файлов).
+- [x] `game_init()` → `Game::init()` (вся цепочка переименована, включая комментарии).
+- [x] XOR-swap в `lobby.hpp` → `std::swap(items[current], items[n_active])`: тактовый паритет, но идиома понятна компилятору; хрупкий при алиасинге трюк убран.
+- [x] Backup: `BattleCity_2026-11-02.7z` в `Desktop/portfolio/` (729 файлов, build-папки исключены).
+- [x] Spawn → линейный расчёт в `Game::init()` от реального поля: колонны на `cfg::spawn_margin_px` от краёв, слоты равномерно по высоте (для 240px = старая лестница 30..210). `config.hpp` — только ручки (`spawn_margin_px`, `spawn_slots`, `units_per_side`), хардкод `tank_spawns` удалён; `is_booked(point_t, Tank)` + `abs(int)` вместо `fabs`; мёртвый `spawn_coords[2]` стал живой таблицей `spawn_coords[2][spawn_slots]`.
+
+## Сделано в сессии NTP-wiring (Эксп-2/Эксп-3, `tmp/inline_const_exp/README.md`)
+
+- [x] **NTP-wiring обоих драйверов.** `st7735.hpp`/`st7789.hpp` переписаны в header-шаблоны, wiring целиком в параметрах: `<&hspiN, DC_ADDR/DC_PIN, CS_ADDR/CS_PIN/SINGLE, RST_ADDR/RST_PIN, SIZES, Y_INV/X_INV/XY_CHG/COL_BGR>`. Ключевые решения:
+  - порты — **целые `GPIOx_BASE`**, не указатели: Clang-21 отвергает round-trip `(std::uintptr_t)GPIOE` как NTP (reinterpret_cast в constant expression); «починить на `GPIO_TypeDef*`» нельзя — материализация указателя внутри `port()`-функции драйвера;
+  - хэндл SPI — pointer-NTP (`&hspi4`/`&hspi1`, адрес линкуется); незаведённые линии — `0`: гварды `if (RST_ADDR)` / `if (CS_ADDR && !SINGLE)` вычисляются компилятором, ветки не генерируются;
+  - `sizes`/`single_device`/биты MADCTL — тоже параметры; geometry (`w/h/x_s/y_s`) и байт MADCTL — constexpr, init-таблица — `static constexpr` во flash;
+  - поля wiring+geometry удалены: объект = vptr + scratch (320 Б ST7735 / 416 Б ST7789), **−68 Б RAM/объект**; `st7735.cpp`/`st7789.cpp` удалены, ST7735 → INTERFACE, ST7789 → STATIC (только `fonts.c`); инстанциация — в `main.cpp` обеих платформ; HAL-SPI принимает `const uint8_t*` — const_cast не нужен нигде.
+- [x] **Замеры (Release, свой конфиг).** H743 text **−660 Б** (27600→26940), с LTO **−784 Б** (26684→25900), RAM data/bss не изменились (объект драйвера на стеке). F401 Release: 18116 text / 1816 bss (старого Release-baseline нет — старый собран в Debug). Кодогенерация: `select/unselect` (single/no-CS) = `bx lr`; `TrnsmtCMD`/`SetWindow` — константы imm/pool (порты `0x58021000`, оффсеты `#0x1`/`#0x1a` H743, `#0x50` F401) вместо загрузок полей; `init()` — один константный цикл по 21 строке таблицы. Артефакты: дампы `tmp/inline_const_exp/dump_main_*_ntpl.txt` + `dump_new_lto.txt`/`dump_old_ltorel.txt` (там же); каталоги сборок удалены при чистке `tmp/`, цифры выше.
+- [x] **Проверка «инлайнит ли LTO библиотеку в Game при одном экземпляре»** (дампы `dump_new_lto.txt` / `dump_old_ltorel.txt`): **нет** — все `Disp_Iface`-вызовы остались vtable-blx одинаково в старой и новой LTO-сборках (`Game::init`→init, width/height через outlined слоты #0xc/#0x10, `Game::loop`→select slot#0x18, `Entity`→print_img ×4); −784 Б — целиком изнутри драйвера. Единственный найденный инлайн — в теле самого драйвера: `HAL_GPIO_WritePin` одиночного CS-pick свёрнут в volatile store `GPIOE->BSRR`, `fill_rect` влез в `init()` с константами. −3 непрямые blx = кодировка вызовов HAL_Delay (blx→bl), не девиртуализация.
+
+## Сделано после сессии NTP-wiring: консолидация драйверов в `Display`
+
+- [x] **Папки `ST7735/` и `ST7789/` упразднены, всё — в `Display` (только шаблоны → папочная структура себя изжила).** Заголовки драйверов и `fonts.h`/`color.h` — в `DeviceDrivers/Display/Inc/`, `fonts.c` — в `Display/Src/` (не компилируется). Единственная цель `display` — это уже INTERFACE (include-путь `Inc` + INTERFACE-ссылка на `stm32cubemx`, т.к. заголовки включают `main.h`). Платформенные линковки урезаны до `game_core display stm32cubemx`. Кодогенерация не тронута: H743 text 26940 / data 28 / bss 1896 (RAM 1920), F401 18116 / 24 / 1816 — совпадение с пре-консолидационной сборкой. Инклюды в `main.cpp` не менялись (`st7735.hpp`/`st7789.hpp` — через тот же `Inc`).
+
+## Открытый бэклог
+
+- [ ] **B — выправить Release-флаги для C++.** `Platforms/STM32F401/cmake/gcc-arm-none-eabi.cmake`: `CMAKE_C_FLAGS_RELEASE = "-Os -g0"` задан, а `CMAKE_CXX_FLAGS_RELEASE` НЕ задан → C++ собирается с дефолтным `-O3`, C — с `-Os`. Для M4 без data-кэша `-Os` обычно быстрее (меньше промахов по flash-выборке) и короче:
+  ```cmake
+  set(CMAKE_CXX_FLAGS_DEBUG   "-O0 -g3")
+  set(CMAKE_CXX_FLAGS_RELEASE "-Os -g0")
+  ```
+  Заодно кандидат: `-Wextra -Wshadow` оба режима.
+- [x] **C — тестовые картинки из `fonts.c`.** Решено консолидацией `Display`: `fonts.o` больше не существует — файл сохранён как резерв в `DeviceDrivers/Display/Src/fonts.c` и не числится ни в одной цели, в прошивку попасть не может (свеже-включать «случайным взглядом» тоже нечем: ST7789-цели не осталось). Внутри файла `knky`/`tek`/`adi1` уже закомментированы, активен `saber` (~32 КБ) + три шрифта. На будущее: если понадобится текст-HUD — завести отдельный STATIC-артефакт (рецепт-заготовка в комментарии `Display/CmakeLists.txt`); до этого инстанс `write_char`/`write_string` будет ловить те unresolved ссылки на `Font_*`-символы — так и задумано.
+- [x] **D — семантические мелочи `tank.cpp`** (решения найдены и внедрены):
+  1. Огонь: `rand()/4096` (даёт ~100%, «пулемёт») → `rand()%4096 > 2200` — честные **~46%** после 60-кадрового кулдауна; очередь огня ходит с дрожанием.
+  2. `ch_dir_cd` — единый счёт (+1/кадр, один инкремент-сайт в `update()`), порог `70 → 35`; мимо → `>>= 1` (ретраи ~0.3 c — как задумано: «давление растёт, пока ролл проваливается»).
+  3. `rotate`: default `= 0` перенесён в декларацию `tank.hpp`.
+- [x] **E — мёртвые include в `tank.cpp`/`shell.cpp`.** Убраны; `disp_iface.hpp` теперь включают только заголовки-потребители: `entity.hpp`, `game.hpp`, `st7789.hpp`.
+- [x] **Плавающая точка ушла из Game.** `fabs(int)` → `abs(int)` в `resolve_collision` (танк-танк, снаряд-танк) и `is_booked`: на F4 double — soft-emulated (libgcc), `abs(int)` — один `rsbs`. `math.h` убран из `game.cpp` (`<cstdlib>`) и из `tank.cpp`. \(Semantics идентична для целых.)
+- [x] Урок из этой же волны (сломалось при пересборке — латали честными includes):
+  - `tank.cpp`: `<cstdlib>` (rand) — тянули транзитом убранные прокладки;
+  - `lobby.hpp`: `<cstddef>` (size_t в `operator[]`);
+  - `st7789.cpp`: `<cstddef>` (size_t) — превентивно, драйвер самодостаточен без HAL-случайностей.
+  Правило: include-циклы «мёртвость» подтверждает компилятор, а не grep; файл включает то, что сам потребляет.
+- [x] **F — ST7735.** `tmp/ST7735/` → `Game_Core/DeviceDrivers/ST7735/` (Inc/Src + CmakeLists.txt, папка удалена). Адаптация по образцу ST7789: класс `ST7735 final : public Disp_Iface` (`init/print_img/width/height override`); `mem_buff[160*320]` (100 КБ RAM — не влезал в F401) заменён scratch-заливкой (320 B, чанки по схеме ST7789); `fiii_rect` → `fill_rect` (was typo), `draw_image/print_img` — const-данные, `BigDAT` чанкуется как у ST7789; MADCTL-бит RGB/BGR исправлен 4→3 (в tmp-версии совал ML). Синтаксис проверен (`-fsyntax-only -Wall -Wextra` с HAL-заглушками); подключение в платформу по той же схеме, что ST7789.
+- [x] **F2 — wiring ST7735: RST/CS-режимы.** `st7735_wiring` + поля: RST заведён → аппаратный импульс в `init()` (10/10/120 мс, как ST7789; софт-резет 0x01 в таблице остаётся), не заведён → пина `{nullptr, 0}` нет; CS — публичные `select()/unselect()` (user-led): драйвер не дёргает линию внутри транзакций; цикл рисования обрамляет сама Game — `Disp_Iface` получил `select()/unselect()` с no-op-дефолтами (ST7789 наследует их без правок), `Game::loop()`: `select()` стоит прямо перед первым фактическим касанием дисплея (танковая фаза только считает, вывод начинается с фазы снарядов — erase'ы `Shell::update`/`explode`/`kill` и далее хвостовые print), `unselect()` — в конце функции (~2 виртуальных вызова на кадр); в `init()` драйвера выбор — непосредственно перед командной таблицей. Панель длинные CS-low сессии позволяет (даташит: CS — только ворота интерфейса; shipped-драйверы и так держали CS вечно). `init()` проходит свой цикл сам (select после hard reset → unselect в конце). Поле `single_device` = «CS есть, но шина его собственная»: `init()` выбирает прямым GPIO-письмом в низ, `select()/unselect()` далее пин не трогают вовсе (соло-шине не нужны per-кадровые обвязки).
+- [x] **F3 — ST7789 паритет.** Из F/F2 перенесено в ST7789: `single_device` в `st7789_wiring` (после `cs_pin`) + поле класса; публичные `select()/unselect() override` (реальная работа с пином только на общей шине); `init()` — свой CS-цикл: развилка `(single_device && CS_Port) → прямое GPIO-письмо / select()` непосредственно перед командной таблицей, `unselect()` в конце после клир-заливки. На текущей плате (CS не заведён в `main`) поведение байт-в-байт прежнее — все точки no-op. Разница с ST7735 нулевая, кроме ушедшего в init местоположения RST-пульса (в ST7789 он исходный). BLK — отдельно, пункт J.
+- [ ] **G — LTO-эксперимент** (Platform-файл, отдельное согласие): `set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)` в toolchain. Проверить по `--print-memory-usage` и `objdump -d Game::loop`, стал ли вызов `disp->print_img` прямым (спекулятивная девиртуализация: `class ST7789 final` уже стоит). Ожидание −10…−15% flash; требует проверки с HAL-asm (`startup_stm32f401.s`).
+- [ ] **H — misc (по желанию)**: флаги ориентации/`sizes` держать в классе `const` (перенести в `st7789_wiring` — уже почти там); `HAL_Delay(15)` в main-цикле заменить на TIM-пейсер (гладкий кадр по SysTick-независимой базе); duty подсветки через `__HAL_TIM_SET_COMPARE`.
+- [x] **I — off-by-one в `Lobby::activate()/sleep()`** (найдено и закрыто в этой же сессии): guard `n_active > N` был неверен при `n_active == N` — читался `items[N]` вне массива `T* items[N]` (мусор из-под `entities[0]`); `activate()` к тому же инкрементировал `n_active` до N+1, а `Game::loop()` дёргал `activate()` без null-проверки. Внедрено: guard'ы `>` → `>=` в обоих методах (`sleep()` при полном пуле теперь честно `nullptr` → существующая проверка в `spawn()` начала срабатывать), плюс null-check `activate()` в `Game::loop()` (полный пул = выстрел не случается на кадре). Заодно проверено сцепление: в `spawn()` после `sleep()` (`n_active < N` гарантирован) бесконтрольный `tanks.activate()` упирается ровно в slot N-1 — не переполняет.
+- [ ] **J — BLK (подсветка) в wiring-структурах драйверов.** BLK (анод LED) у модулей может отсутствовать (тогда надо подать высокий уровень/ничего не делать), а может быть заведён на ШИМ от таймера (диммирование) — и это надо разрешить (pin и/или TIM-канал в wiring; решение по PWM — за Platform-слоем). Отложено по решению сессии.
+
+- [x] **K — `const` для wiring-конфигурации драйверов.** Решено: **const-поля ничего не дают** (Эксп-2: RT==CST байт-в-байт, заголовки создаёт outliner), рабочая форма — **non-type параметры шаблона**: guard'ы вычисляются на компиляции (single/no-CS → тела `select`/`unselect` = `bx lr`), все тела без загрузок полей, geometry/MADCTL/init-таблица constexpr. Внедрено в обоих драйверах (см. «Сделано в сессии NTP-wiring» выше и `tmp/inline_const_exp/README.md`). При полиморфном `Game` интерфейс остался без изменений (`Disp_Iface` как был).
+- [ ] **L — типизированная Game (полное удаление vtable-записей; опционально).** Остаток Эксп-3: ~7 непрямых вызовов на кадр остаются через `Disp_Iface*` (`Game::init`→init, `Game::loop`→select, width/height, `Entity::print/clear`→print_img); default LTO их не убирает даже при единственном экземпляре. Лечение: `GameT<LcdT>` (шаблонный Game + NTP-драйвер) — работает и без LTO, образец `tmp/devirt_demo/demo.cpp`, вариант Б. Держать в виду контро-пункт ниже: измеренная цена виртуальности ~0.03–0.04% кадра — делать только если flash/RAM станут узкими местами.
+- [ ] **M — WPD-вариант вместо L (оверкилл, попробовать «как выглядит»):** `-flto=thin -fsplit-lto-unit -fwhole-program-vtables -fvisibility=hidden` (интерфейс без дефолтных тел). Дефолтный IPO/LTO, включенный через `CMAKE_INTERPROCEDURAL_OPTIMIZATION`, маркировку тип-тестов не разворачивает — проверено.
+
+## Контро-пункты — НЕ трогать
+
+- **Девиртуализация рефакторингом.** Измеренная цена виртуальности: ~0.03–0.04% кадра (~50–60 blit × ~4 такта). Оверлеер: одна вешь `override final` в `ST7789` уже стоит + возможный LTO. Переписывать структуру ради этого — нет.
+- **`resolve_collision` O(n²)** — ~2.5k сравнений/кадр, <1% кадра. Реже трогать.
+- **`int → int16_t`** у `Entity` — бас численный выигрыш 2–3 КБ RAM среди ~120 объектов; имеет только если когда-нибудь RAM станет узким местом.
+- **HAL busy-wait** (`while (hspi->State != READY)`) — легален: `State` объявлен `__IO` (volatile), при `-O3` не сворачивается.
+
+## Быстрая проверка после пересборки
+
+`--print-memory-usage` уже включен в линкер: сравнить RAM/FLASH до/после. Ожидания по сделанному:
+- спрайты const: RAM ~−6 КБ, flash ~+0.4 КБ;
+- уход из `resolve_collision` soft-double: flash чуть меньше (libgcc-код для double больше не порождается), быстрее цикл сравнений;
+- счёт-микроскопика от `ch_dir_cd`/spawn — несущественно, проверяем только поведение (повороты ~0.6 c первый ролл, ретраи ~0.3 c; огонь после кулдауна ~46%).

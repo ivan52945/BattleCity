@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
 
-add_subdirectory(ST7789)
-add_subdirectory(ST7735)
+# A single interface target: Disp_Iface + header templates of both drivers
+# + reserved (not compiled) fonts. See Display/CmakeLists.txt.
 add_subdirectory(Display)
