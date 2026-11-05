@@ -1,9 +1,7 @@
-#include <math.h>
+#include <cstdlib> /* rand */
 #include "tank.hpp"
-#include "display.hpp"
 #include <assets.hpp>
 #include "shell.hpp"
-#include "config.hpp"
 
 
 Tank::Tank() :
@@ -38,7 +36,8 @@ void Tank::setSide(const int side)
 void Tank::move(const int fld_x_end, const int fld_y_end)
 {
   action = MOVE;
-  ch_dir_cd += 1;
+  /* ch_dir_cd here is NOT incremented: the direction-pump cooldown has
+   * a single accounting site in update() (+1 per frame). */
   
   switch (dir) {
     case UP:
@@ -111,7 +110,7 @@ void Tank::back(const bool stuck)
   //This function don't  use print
 }
 
-void Tank::rotate(const int new_dir = false)
+void Tank::rotate(const int new_dir)
 {
   dir = (new_dir % 4);
   this->frame_buff_directed = frame_buff[dir];
@@ -122,7 +121,12 @@ void Tank::rotate(const int new_dir = false)
 
 void Tank::update(const int fld_x_end, const int fld_y_end)
 {
-  if ((ch_dir_cd > 70) || (stuck_cnt > 3)) {
+  /* Direction pump: every 35 honest frames (ch_dir_cd counts +1 per
+   * frame, a single accounting site) roll ~36%. Hit - rotate.
+   * Miss - the cooldown halves, so the tank retries roughly twice as
+   * soon (~18 frames): pressure keeps growing while the roll keeps
+   * failing. */
+  if ((ch_dir_cd > 35) || (stuck_cnt > 3)) {
     if ((rand() % 4096) > 2600) {
       stuck_cnt = 0;
       ch_dir_cd = 0;
@@ -137,8 +141,12 @@ void Tank::update(const int fld_x_end, const int fld_y_end)
   
   move(fld_x_end, fld_y_end);
   
+  /* Fire roll: honestly probabilistic (was rand()/4096 - a typo that
+   * made the roll ~100% true, i.e. plated periodic fire). After the
+   * 60-frame cooldown: ~46% to open fire. Miss halves shot_cd, so the
+   * next roll comes ~30 frames later. */
   if (shot_cd >= 60) {
-    if ((rand() / 4096) > 2200) {
+    if ((rand() % 4096) > 2200) {
       shot_cd = 0;
       shot_st = true;
     }
@@ -149,7 +157,7 @@ void Tank::update(const int fld_x_end, const int fld_y_end)
     shot_cd += 1;
 }
 
-bool Tank::isShot()
+bool Tank::isShot(const int fld_x_end, const int fld_y_end)
 {
   if (!shot_st)
     return false;
@@ -177,12 +185,12 @@ bool Tank::isShot()
 
   if (x_shot <= SHELL_LENGTH / 2)
     return false;
-  if (x_shot >= FIELD_WIDTH - (SHELL_LENGTH / 2))
+  if (x_shot >= fld_x_end + 1 - (SHELL_LENGTH / 2))
     return false;
 
   if (y_shot <= SHELL_LENGTH / 2)
     return false;
-  if (y_shot >= FIELD_HEIGHT - (SHELL_LENGTH / 2))
+  if (y_shot >= fld_y_end + 1 - (SHELL_LENGTH / 2))
     return false;
 
   return true;

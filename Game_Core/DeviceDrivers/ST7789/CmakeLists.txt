@@ -5,13 +5,15 @@ SET(INC Inc)
 
 SET(TARGET_LIB ST7789)
 
+# The driver is a header-template now: the wiring constants of the
+# module are non-type template arguments, every body lives in
+# Inc/st7789.hpp and is instantiated in the platform TU (main.cpp).
+# Only the C font data stays compiled - fonts.c needs no HAL includes.
 add_library(${TARGET_LIB} STATIC)
 
 target_sources(${TARGET_LIB} PRIVATE
-    ${SRC}/fonts.c
-    ${SRC}/st7789.c)
+    ${SRC}/fonts.c)
 
-target_include_directories(${TARGET_LIB} PUBLIC ${INC})
-
-target_link_libraries(${TARGET_LIB} PRIVATE
-    stm32cubemx)
+target_include_directories(${TARGET_LIB} PUBLIC
+    ${INC}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Display/Inc)

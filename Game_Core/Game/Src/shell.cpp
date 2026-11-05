@@ -1,5 +1,4 @@
 #include "shell.hpp"
-#include "display.hpp"
 #include "assets.hpp"
 
 Shell::Shell() : Entity(0, 0, 1, 3, 3, 1, MOVE, 1)

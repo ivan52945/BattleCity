@@ -1,17 +1,10 @@
 cmake_minimum_required(VERSION 3.22)
 
-SET(SRC Src)
-SET(INC Inc)
-
 SET(TARGET_LIB display)
 
-add_library(${TARGET_LIB} STATIC)
+# Display is a header-only module now: an abstract display interface
+# (Inc/disp_iface.hpp). There is no compiled adapter - the platform
+# layer (main.cpp) creates the concrete driver and passes it into Game.
+add_library(${TARGET_LIB} INTERFACE)
 
-target_sources(${TARGET_LIB} PRIVATE
-    display.cpp)
-
-target_include_directories(${TARGET_LIB} PUBLIC .)
-
-target_link_libraries(${TARGET_LIB} PUBLIC
-    ST7789
-    stm32cubemx)
+target_include_directories(${TARGET_LIB} INTERFACE Inc)

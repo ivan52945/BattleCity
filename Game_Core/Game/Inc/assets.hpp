@@ -15,10 +15,10 @@
 
 #define SHEL_FRAME_S    (((SHEL_H * SHEL_W) | 15) + 1)
 
-extern uint16_t tank_ally_frames[SIDES][T_FRMS_N][TANK_FRAME_S];
+extern const uint16_t tank_ally_frames[SIDES][T_FRMS_N][TANK_FRAME_S];
 
-extern uint16_t tank_enemy_frames[SIDES][T_FRMS_N][TANK_FRAME_S];
+extern const uint16_t tank_enemy_frames[SIDES][T_FRMS_N][TANK_FRAME_S];
 
-extern uint16_t shell_frames[SHEL_FRAME_S];
+extern const uint16_t shell_frames[SHEL_FRAME_S];
 
-extern uint16_t img_clear[TANK_FRAME_S];
+extern const uint16_t img_clear[TANK_FRAME_S];

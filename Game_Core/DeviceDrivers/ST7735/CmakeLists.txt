@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.22)
+
+SET(INC Inc)
+
+SET(TARGET_LIB ST7735)
+
+# The driver is a header-template now: the wiring constants of the
+# module are non-type template arguments, every body lives in
+# Inc/st7735.hpp and is instantiated in the platform TU (main.cpp).
+# There is nothing to compile here - same scheme as the Display module.
+add_library(${TARGET_LIB} INTERFACE)
+
+target_include_directories(${TARGET_LIB} INTERFACE
+    ${INC}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Display/Inc)
+
+target_link_libraries(${TARGET_LIB} INTERFACE
+    stm32cubemx)

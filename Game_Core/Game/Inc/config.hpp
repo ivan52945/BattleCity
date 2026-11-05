@@ -1,28 +1,21 @@
 #pragma once
 
-#include "point.hpp"
-#include "display.hpp"
+/* Gameplay knobs. Field geometry is NOT here any more: the panel size
+ * comes at runtime (Disp_Iface), the spawn layout is computed from it
+ * in Game::init() (two columns near the field edges, slots spread
+ * evenly over the height). */
+namespace cfg {
 
-#define FIELD_WIDTH  DISPLAY_W
-#define FIELD_HEIGHT DISPLAY_H
+/* Distance of the tank spawn columns from the field edges, px. */
+constexpr int spawn_margin_px = 30;
 
-constexpr point_t tank_spawns[2][7] = {
-  {
-    {.x = 30, .y = 30 },
-    {.x = 30, .y = 60 },
-    {.x = 30, .y = 90 },
-    {.x = 30, .y = 120 },
-//    {.x = 30, .y = 150 },
-//    {.x = 30, .y = 180 },
-//    {.x = 30, .y = 210 },
-  },
-  {
-    {.x = 210, .y = 30 },
-    {.x = 210, .y = 60 },
-    {.x = 210, .y = 90 },
-    {.x = 210, .y = 120 },
-//    {.x = 210, .y = 150 },
-//    {.x = 210, .y = 180 },
-//    {.x = 210, .y = 210 },
-  },
-};
+/* Spawn slots per side, spread evenly over the field height.
+ * 7 slots x 30 px fills a classic 240px panel: y = 30..210 -
+ * the same ladder the old literal comment table described. */
+constexpr int spawn_slots = 7;
+
+/* Maximum simultaneous tanks per side. Upper bound for the side's
+ * spawn slots count; the pool size (Lobby) must hold both sides. */
+constexpr int units_per_side = 4;
+
+}
