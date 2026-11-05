@@ -8,12 +8,12 @@
  * The shape is asymmetric by design and mirrors what the drivers
  * actually are:
  *
- *   - The blit path (print_img) carries no per-object state anywhere
+   *   - The blit path (print_img) carries no per-object state anywhere
  *     (the transaction chain is fully parameterized by the wiring
  *     template arguments; the scratch belongs to fills only), so it
  *     is required as a STATIC member: Entity calls it with no object
  *     and no pointer, and the per-slot display pointer of the game
- *     core disappears with the pool RAM it was costing.
+ *     core disappears with the stack it was costing.
  *
  *   - Lifecycle and bus picking (init/select/unselect) act on the one
  *     concrete driver object the platform main() created, so they are

@@ -10,11 +10,11 @@
 template <class LcdT>
 class Shell final : public Entity<LcdT> {
 public:
-  /* Re-export the dependent base members: see tank.hpp. */
+  /* Re-export the dependent base members (all but `side` bare-used:
+   * get_out() sets it via this-> only - the param shadows it). */
   using Entity<LcdT>::x;
   using Entity<LcdT>::y;
   using Entity<LcdT>::dir;
-  using Entity<LcdT>::side;
   using Entity<LcdT>::h;
   using Entity<LcdT>::speed;
   using Entity<LcdT>::frame;

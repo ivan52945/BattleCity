@@ -17,7 +17,7 @@
  * Disp<LcdT> concept checks the driver shape at this instantiation
  * point; several GameT over different driver types co-exist in one
  * firmware by separate instantiations. */
-template <class LcdT> requires Disp<LcdT>
+template <Disp LcdT>
 class GameT {
 public:
     int unit_n_cur[2] = {0, 0};
@@ -82,7 +82,7 @@ private:
     void resolve_collision(Shell<LcdT> &shell, Tank<LcdT> &tank);
 };
 
-template <class LcdT> requires Disp<LcdT>
+template <Disp LcdT>
 void GameT<LcdT>::init()
 {
   /* Lifecycle only: the field geometry and the spawn ladder are
@@ -91,7 +91,7 @@ void GameT<LcdT>::init()
   disp.init();
 }
 
-template <class LcdT> requires Disp<LcdT>
+template <Disp LcdT>
 bool GameT<LcdT>::is_booked(const point_t &pt, const Tank<LcdT> &tank)
 {
   const int dist_x = tank.w - 1 + 2;
@@ -103,7 +103,7 @@ bool GameT<LcdT>::is_booked(const point_t &pt, const Tank<LcdT> &tank)
   return true;
 }
 
-template <class LcdT> requires Disp<LcdT>
+template <Disp LcdT>
 void GameT<LcdT>::spawn()
 {
   for (int s_i = 0; s_i < 2; ++s_i)
@@ -139,7 +139,7 @@ void GameT<LcdT>::spawn()
     }
 }
 
-template <class LcdT> requires Disp<LcdT>
+template <Disp LcdT>
 void GameT<LcdT>::resolve_collision(Tank<LcdT> &t_moved, const Tank<LcdT> &t_stayed)
 {
   const int dist_x = (t_moved.w + t_stayed.w) / 2;
@@ -151,7 +151,7 @@ void GameT<LcdT>::resolve_collision(Tank<LcdT> &t_moved, const Tank<LcdT> &t_sta
   t_moved.back(true);
 }
 
-template <class LcdT> requires Disp<LcdT>
+template <Disp LcdT>
 void GameT<LcdT>::resolve_collision(Shell<LcdT> &shell, Tank<LcdT> &tank)
 {
   const int dist_x = (tank.w + shell.w) / 2;
@@ -173,7 +173,7 @@ void GameT<LcdT>::resolve_collision(Shell<LcdT> &shell, Tank<LcdT> &tank)
   unit_n_cur[tank.side] -= (tank.kill()) ? 1 : 0;
 }
 
-template <class LcdT> requires Disp<LcdT>
+template <Disp LcdT>
 void GameT<LcdT>::loop()
 {
   ++game_i;

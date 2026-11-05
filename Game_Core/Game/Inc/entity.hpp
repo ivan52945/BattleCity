@@ -114,8 +114,8 @@ void Entity<LcdT>::clear() const
   const uint16_t w_r = w_img / 2;
   const uint16_t h_r = h_img / 2;
 
-  int x_t = this->x;
-  int y_t = this->y;
+  int x_t = x;
+  int y_t = y;
 
   switch (dir) {
     case UP:

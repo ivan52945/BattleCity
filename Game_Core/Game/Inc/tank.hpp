@@ -65,7 +65,7 @@ Tank<LcdT>::Tank() :
 {
   x_shot = 0;
   y_shot = 0;
-  frame_buff_directed = frame_buff[this->dir];
+  frame_buff_directed = frame_buff[dir];
   frame_i = 0;
   frame = &frame_buff_directed[0][0];
 }
@@ -272,7 +272,7 @@ void Tank<LcdT>::respawn(const int x, const int y, const int side)
   this->x = x;
   this->y = y;
   shot_cd = 0;
-  this->action = ROTATE;
+  action = ROTATE;
   dir = (side) ? 3 : 1;
   frame_i = 0;
   ch_dir_cd = 0;
