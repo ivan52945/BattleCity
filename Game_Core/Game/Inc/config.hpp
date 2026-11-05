@@ -1,9 +1,9 @@
 #pragma once
 
-/* Gameplay knobs. Field geometry is NOT here any more: the panel size
- * comes at runtime (Disp_Iface), the spawn layout is computed from it
- * in Game::init() (two columns near the field edges, slots spread
- * evenly over the height). */
+/* Gameplay knobs. Field geometry is NOT here: the panel size is a
+ * compile-time constant of the driver instantiation (static constexpr
+ * w()/h()), the field edges and the spawn ladder fold at compile time
+ * in GameT. */
 namespace cfg {
 
 /* Distance of the tank spawn columns from the field edges, px. */

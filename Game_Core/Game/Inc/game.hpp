@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdlib>
+#include <array>
 #include "disp.hpp"
 #include "lobby.hpp"
 #include "point.hpp"
@@ -22,12 +23,37 @@ public:
     int unit_n_cur[2] = {0, 0};
     /* Simultaneous tanks quota per side (gameplay config). */
     int unit_n_max[2] = {cfg::units_per_side, cfg::units_per_side};
-    int fld_x_end;
-    int fld_y_end;
+    /* The panel geometry is a compile-time constant of the driver
+     * instantiation (w()/h() are constexpr static members of the
+     * type): the field edges fold at compile time - the loops pass
+     * immediates, and the object carries neither the old ladder nor
+     * the two field-end ints. */
+    static constexpr int fld_x_end = LcdT::w() - 1;
+    static constexpr int fld_y_end = LcdT::h() - 1;
 
-    /* Spawn slots: computed in init() from the real field geometry
-     * (columns near the edges, slots spread evenly over the height). */
-    point_t spawn_coords[2][cfg::spawn_slots] = {};
+    /* The spawn ladder as a compile-time constexpr table: two columns
+     * pinned cfg::spawn_margin_px from the field edges, the slots
+     * spread evenly over the height (240px panel: 30..210 by 30 - the
+     * same ladder the old init() loop drew). Flash-resident, not on
+     * the object. */
+    static constexpr auto make_spawn_coords()
+        -> std::array<std::array<point_t, cfg::spawn_slots>, 2>
+    {
+        constexpr int span = LcdT::h() - 2 * cfg::spawn_margin_px;
+        std::array<std::array<point_t, cfg::spawn_slots>, 2> coords = {};
+        for (int s_i = 0; s_i < 2; ++s_i)
+            for (int s = 0; s < cfg::spawn_slots; ++s)
+                coords[s_i][s] = {
+                    .x = (s_i == 0) ? cfg::spawn_margin_px
+                                    : (LcdT::w() - cfg::spawn_margin_px),
+                    .y = cfg::spawn_margin_px
+                         + (s * span) / (cfg::spawn_slots - 1),
+                };
+        return coords;
+    }
+
+    static constexpr std::array<std::array<point_t, cfg::spawn_slots>, 2>
+        spawn_coords = make_spawn_coords();
 
     Lobby<Tank<LcdT>, 20> tanks;
     Lobby<Shell<LcdT>, 96> shells;
@@ -59,25 +85,10 @@ private:
 template <class LcdT> requires Disp<LcdT>
 void GameT<LcdT>::init()
 {
+  /* Lifecycle only: the field geometry and the spawn ladder are
+   * compile-time constants of the driver instantiation now, there is
+   * nothing left to compute here. */
   disp.init();
-
-  /* The panel geometry is known after init(): the field size is taken
-   * from the real width()/height() of the connected matrix. */
-  fld_x_end = disp.w() - 1;
-  fld_y_end = disp.h() - 1;
-
-  /* Spawn config is derived from the real field: two columns pinned
-   * cfg::spawn_margin_px from the field edges, the slots spread evenly
-   * over the height. For a 240px panel this reproduces the old literal
-   * ladder 30..210 by 30. */
-  const int W = disp.w();
-  const int span = disp.h() - 2 * cfg::spawn_margin_px;
-  for (int s_i = 0; s_i < 2; ++s_i)
-    for (int s = 0; s < cfg::spawn_slots; ++s)
-      spawn_coords[s_i][s] = {
-          .x = (s_i == 0) ? cfg::spawn_margin_px : (W - cfg::spawn_margin_px),
-          .y = cfg::spawn_margin_px + (s * span) / (cfg::spawn_slots - 1),
-      };
 }
 
 template <class LcdT> requires Disp<LcdT>

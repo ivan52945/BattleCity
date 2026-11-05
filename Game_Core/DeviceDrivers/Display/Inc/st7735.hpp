@@ -289,9 +289,10 @@ public:
     }
 
     /* Geometry is a compile-time constant of the instantiation
-     * (static callable, the reference form works too). */
-    static uint16_t w()  { return (uint16_t)geo.w; }
-    static uint16_t h() { return (uint16_t)geo.h; }
+     * (constexpr static - the Game folds the field edges and the
+     * spawn ladder from these at compile time). */
+    static constexpr uint16_t w()  { return (uint16_t)geo.w; }
+    static constexpr uint16_t h() { return (uint16_t)geo.h; }
 
     /* Driver-specific primitives (stateless: the wiring NTPs are
      * the whole state). */
