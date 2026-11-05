@@ -120,9 +120,9 @@ int main(void)
   Lc lcd;
 
   /* The Game is typed to this exact driver instantiation: the pools
-   * and their entities dial its members directly - the panel identity
-   * travels with the type. */
-  GameT<Lc> game(&lcd);
+   * blit through its static print path, the lifecycle goes to this
+   * object. */
+  GameT<Lc> game(lcd);
 
   /* Backlight: PE10 (LCD_BLK) is LEFT LOW - as the reference project
    * does while its panel is lit. This wiring keeps the backlight on

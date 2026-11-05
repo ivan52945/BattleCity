@@ -257,7 +257,13 @@ public:
         unselect();
     }
 
-    void print_img(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t img[])
+    /* Static blit: no per-object state anywhere on the print path
+     * (the transaction chain is wired by the template arguments), so
+     * Entity dials the type directly and the per-slot display pointer
+     * of the core is gone. noinline keeps each core call site one
+     * 'bl' - the inlined SetWindow+DMA body (~300 B) would replicate
+     * in every print/clear site otherwise. */
+    __attribute__((noinline)) static void print_img(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t img[])
     {
         draw_image(x, y, w, h, img);
     }
@@ -282,12 +288,14 @@ public:
             HAL_GPIO_WritePin(cs_port(), CS_PIN, GPIO_PIN_SET);
     }
 
-    /* Geometry is a compile-time constant of the instantiation. */
-    uint16_t w() const  { return (uint16_t)geo.w; }
-    uint16_t h() const { return (uint16_t)geo.h; }
+    /* Geometry is a compile-time constant of the instantiation
+     * (static callable, the reference form works too). */
+    static uint16_t w()  { return (uint16_t)geo.w; }
+    static uint16_t h() { return (uint16_t)geo.h; }
 
-    /* Driver-specific primitives. */
-    void draw_image(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t data[]) const
+    /* Driver-specific primitives (stateless: the wiring NTPs are
+     * the whole state). */
+    static void draw_image(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t data[])
     {
         ST7735_SetWindow(x, y, x + w - 1, y + h - 1);
 
@@ -329,7 +337,7 @@ public:
     }
 
 private:
-    void ST7735_TrnsmtCMD(uint8_t cmd) const
+    static void ST7735_TrnsmtCMD(uint8_t cmd)
     {
         HAL_GPIO_WritePin(dc_port(), DC_PIN, GPIO_PIN_RESET);
         HAL_SPI_Transmit(HSPI, &cmd, 1, 15);
@@ -337,19 +345,19 @@ private:
         HAL_GPIO_WritePin(dc_port(), DC_PIN, GPIO_PIN_SET);
     }
 
-    void ST7735_TrnsmtDAT(const uint8_t data[], uint8_t size) const
+    static void ST7735_TrnsmtDAT(const uint8_t data[], uint8_t size)
     {
         HAL_SPI_Transmit(HSPI, &data[0], size, 15);
         while(HSPI->State != HAL_SPI_STATE_READY) { }
     }
 
-    void ST7735_SmallCMD(uint8_t cmd, const uint8_t arg[], uint8_t arg_n) const
+    static void ST7735_SmallCMD(uint8_t cmd, const uint8_t arg[], uint8_t arg_n)
     {
         ST7735_TrnsmtCMD(cmd);
         ST7735_TrnsmtDAT(&arg[0], arg_n);
     }
 
-    void ST7735_BigDAT(const uint8_t data[], uint32_t size) const
+    static void ST7735_BigDAT(const uint8_t data[], uint32_t size)
     {
         while (size > 0)
         {
@@ -363,7 +371,7 @@ private:
         }
     }
 
-    void ST7735_InitCMD(const st7735_cmd_i_t* cmd) const
+    static void ST7735_InitCMD(const st7735_cmd_i_t* cmd)
     {
         ST7735_TrnsmtCMD(cmd->opc);
 
@@ -375,7 +383,7 @@ private:
 
     //  Low-byte addresses only: ST7735 RAM fits 256 rows/cols, so the
     //  high halves of the window coordinates stay zero.
-    void ST7735_SetWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) const
+    static void ST7735_SetWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
     {
         static uint8_t data[4] = { 0 };
 

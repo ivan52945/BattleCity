@@ -114,9 +114,9 @@ int main(void)
   Lc lcd;
 
   /* The Game is typed to this exact driver instantiation: the pools
-   * and their entities dial its members directly - the panel identity
-   * travels with the type. */
-  GameT<Lc> game(&lcd);
+   * blit through its static print path, the lifecycle goes to this
+   * object. */
+  GameT<Lc> game(lcd);
 
   /* Panel backlight: PWM on TIM1_CH1, as the old ST7789_Init did. */
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);

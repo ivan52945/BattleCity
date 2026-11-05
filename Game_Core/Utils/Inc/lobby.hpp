@@ -46,19 +46,6 @@ public:
         return items[i];
     }
 
-    /* Stamp every slot of the pool with the display of the owning
-     * Game. Slot objects are created once with the pool and only
-     * reused afterwards, so the single stamp in Game::init() covers
-     * their whole lifetime (before the first print()/clear()).
-     * The display type comes from the pooled class itself (T::disp):
-     * the pool stays display-agnostic without any interface header. */
-    template <class D>
-    void set_disp(D* d)
-    {
-        for (int i = 0; i < N; ++i)
-            items[i]->disp = d;
-    }
-
     T* activate()
     {
         /* Full pool: no slot to hand out (items[N] is past the end). */
