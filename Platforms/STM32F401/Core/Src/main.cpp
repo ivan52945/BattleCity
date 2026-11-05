@@ -104,15 +104,19 @@ int main(void)
    * (&hspi1), pins as GPIO_PIN_n. The MY|MV flags fold the MADCTL byte
    * and swap the geometry sides (y_s 80 -> x_s 80) - everything is
    * compile-time. */
-  ST7789<&hspi1,
+  using Lc = ST7789<&hspi1,
          GPIOB_BASE, LCD__DC_Pin,        /* DC: PB2 */
          0,          0,          false,  /* the module has CS tied to GND */
          GPIOB_BASE, LCD_RES_Pin,        /* RST: PB10 */
          st_240x240,
-         true, false, true, false>       /* MY | MX | MV | BGR */
-      lcd;
+         true, false, true, false>;      /* MY | MX | MV | BGR */
 
-  Game game = Game(&lcd);
+  Lc lcd;
+
+  /* The Game is typed to this exact driver instantiation: the pools
+   * and their entities dial its members directly - the panel identity
+   * travels with the type. */
+  GameT<Lc> game(&lcd);
 
   /* Panel backlight: PWM on TIM1_CH1, as the old ST7789_Init did. */
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);

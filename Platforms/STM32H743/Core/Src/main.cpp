@@ -110,15 +110,19 @@ int main(void)
    * (&hspi4), pins as GPIO_PIN_n. The MY|MV flags fold the MADCTL byte
    * and swap the geometry sides (26/1 -> 1/26): the panel goes from
    * portrait 80x160 to landscape 160x80 - everything is compile-time. */
-  ST7735<&hspi4,
+  using Lc = ST7735<&hspi4,
          GPIOE_BASE, LCD__DC_Pin,        /* DC: PE13 */
          GPIOE_BASE, LCD__CS_Pin, true,  /* CS: PE11, the bus is the panel's own */
          0,          0,                  /* the module has no RST wired */
          st_80x160_drk,
-         true, false, true, false>       /* MY | MX | MV | BGR */
-      lcd;
+         true, false, true, false>;      /* MY | MX | MV | BGR */
 
-  Game game = Game(&lcd);
+  Lc lcd;
+
+  /* The Game is typed to this exact driver instantiation: the pools
+   * and their entities dial its members directly - the panel identity
+   * travels with the type. */
+  GameT<Lc> game(&lcd);
 
   /* Backlight: PE10 (LCD_BLK) is LEFT LOW - as the reference project
    * does while its panel is lit. This wiring keeps the backlight on

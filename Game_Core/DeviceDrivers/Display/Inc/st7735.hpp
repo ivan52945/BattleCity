@@ -2,10 +2,9 @@
 
 #include "main.h"
 
-/* The docking point: the driver plugs in as an implementation of the
- * abstract display interface of the Game Core (disp_iface.hpp). */
-#include "disp_iface.hpp"
-
+/* The docking point: the driver plugs in as the typed display of the
+ * Game Core - GameT<Tank<LcdT>> with LcdT = this exact instantiation
+ * dials the members below directly, no interface idiom in between. */
 #include <cstdint>
 #include <cstring> /* memcpy */
 
@@ -102,7 +101,7 @@ template <SPI_HandleTypeDef* HSPI,
           std::uintptr_t RST_ADDR, uint32_t RST_PIN,
           st7735_sizes SIZES,
           bool Y_INV, bool X_INV, bool XY_CHG, bool COL_BGR>
-class ST7735 final : public Disp_Iface
+class ST7735 final
 {
     uint16_t scratch[ST7735_SCRATCH];
 
@@ -172,8 +171,8 @@ public:
     static GPIO_TypeDef* cs_port()  { return (GPIO_TypeDef*)CS_ADDR; }
     static GPIO_TypeDef* rst_port() { return (GPIO_TypeDef*)RST_ADDR; }
 
-    /* Disp_Iface */
-    void init() override
+    /* Lifecycle. */
+    void init()
     {
         //  Hardware reset pulse when the module wires the RST pin: MX_GPIO_Init
         //  may leave RES low, the controller would otherwise never leave the
@@ -258,34 +257,34 @@ public:
         unselect();
     }
 
-    void print_img(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t img[]) override
+    void print_img(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t img[])
     {
         draw_image(x, y, w, h, img);
     }
 
     /* User-led CS control: the driver never touches the line inside
-     * its transactions - the Game calls select()/unselect() via
-     * Disp_Iface around every drawing cycle, and only on a shared bus
+     * its transactions - the GameT drawing cycles call select()/
+     * unselect() around every frame, and only on a shared bus
      * (the device is not the only one) the pin is actually driven.
      * single_device bus: picked once in init(), both methods are pure
      * no-ops afterwards. No cs_* wiring - no-ops as well. init() runs
      * its own cycle. No CS and/or single-device instantiations fold
      * into empty bodies here. */
-    void select() const override
+    void select() const
     {
         if (CS_ADDR && !SINGLE)
             HAL_GPIO_WritePin(cs_port(), CS_PIN, GPIO_PIN_RESET);
     }
 
-    void unselect() const override
+    void unselect() const
     {
         if (CS_ADDR && !SINGLE)
             HAL_GPIO_WritePin(cs_port(), CS_PIN, GPIO_PIN_SET);
     }
 
     /* Geometry is a compile-time constant of the instantiation. */
-    uint16_t w() const override  { return (uint16_t)geo.w; }
-    uint16_t h() const override { return (uint16_t)geo.h; }
+    uint16_t w() const  { return (uint16_t)geo.w; }
+    uint16_t h() const { return (uint16_t)geo.h; }
 
     /* Driver-specific primitives. */
     void draw_image(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t data[]) const
