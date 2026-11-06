@@ -67,6 +67,7 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     game_core
+    display
     stm32cubemx
     # Add user defined libraries
 )

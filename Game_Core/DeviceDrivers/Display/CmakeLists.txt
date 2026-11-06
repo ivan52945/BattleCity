@@ -1,17 +1,32 @@
 cmake_minimum_required(VERSION 3.22)
 
-SET(SRC Src)
-SET(INC Inc)
-
 SET(TARGET_LIB display)
 
-add_library(${TARGET_LIB} STATIC)
+# Single display module. Both ST7735/ and ST7789/ folders are merged into
+# it now - every driver is a header template (Inc/st7735.hpp, Inc/st7789.hpp):
+# wiring constants (SPI handle, DC/CS/RST addresses and pins, sizes,
+# orientation bits) are non-type template arguments, instantiating lives
+# in the platform TU (main.cpp). There is nothing to compile here -
+# the concrete object is created by main() and injected into Game.
+add_library(${TARGET_LIB} INTERFACE)
 
-target_sources(${TARGET_LIB} PRIVATE
-    display.cpp)
+target_include_directories(${TARGET_LIB} INTERFACE Inc)
 
-target_include_directories(${TARGET_LIB} PUBLIC .)
-
-target_link_libraries(${TARGET_LIB} PUBLIC
-    ST7789
+# Driver headers include "main.h" (pin numbers, SPI_HandleTypeDef), so the
+# platform HAL include path is offered to every consumer of the target.
+# In a standalone Game_Core build the stm32cubemx target does not exist -
+# the name degrades to a plain linker flag, which is harmless.
+target_link_libraries(${TARGET_LIB} INTERFACE
     stm32cubemx)
+
+# Reserved data - Src/fonts.c (three text fonts + one test image compiled
+# part; saber) stays OUT of the build (see TODO item C): the HAL-less C
+# source is kept on disk only until a text HUD or panel test may need it.
+# To re-enable it, declare a tiny STATIC target next to the interface:
+#
+# add_library(display_res STATIC Src/fonts.c)   # no HAL includes needed
+# target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE display_res)
+#
+# ...or simply reference the data symbols from some TU (the archive member
+# gets pulled then). Until then/write_char-instantiation the reference to
+# Font_7x10/Font_11x18/Font_16x26 from st7789.hpp stays unresolved by design.

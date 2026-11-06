@@ -1,18 +1,7 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
-
-template <typename T>
-void swap_pointers(T*& a, T*& b) {
-    auto x = reinterpret_cast<uintptr_t>(a);
-    auto y = reinterpret_cast<uintptr_t>(b);
-
-    x ^= y; // x = a ^ b
-    y ^= x; // y = b ^ (a ^ b) = a
-    x ^= y; // x = (a ^ b) ^ a = b
-
-    a = reinterpret_cast<T*>(x);
-    b = reinterpret_cast<T*>(y);
-}
+#include <utility> /* std::swap */
 
 template <typename T, int N>
 class Lobby
@@ -59,7 +48,8 @@ public:
 
     T* activate()
     {
-        if (n_active > N)
+        /* Full pool: no slot to hand out (items[N] is past the end). */
+        if (n_active >= N)
             return nullptr;
 
         is_sleep = false;
@@ -69,7 +59,8 @@ public:
 
     T *sleep()
     {
-        return (n_active > N) ? nullptr : items[n_active];
+        /* Full pool: no free slot to reserve; the caller must bail. */
+        return (n_active >= N) ? nullptr : items[n_active];
     }
 
     int active_n() const
@@ -92,7 +83,7 @@ public:
         if (current >=  n_active)
             return;
 
-        swap_pointers(items[current], items[n_active]);
+        std::swap(items[current], items[n_active]);
 
         is_sleep = true;
     }

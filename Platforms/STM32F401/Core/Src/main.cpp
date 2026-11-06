@@ -26,6 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "game.hpp"
+#include "st7789.hpp"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -93,7 +94,35 @@ int main(void)
   MX_SPI1_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  Game game = Game();
+  /* The display of this platform: SPI1, the size is st_240x240, the
+   * orientation is the same as the old default config had (rotation 1:
+   * MY|MV, X shift 80). The module has no CS line wired - the cs_*
+   * parameters are 0, RES is wired (PB10).
+   *
+   * The wiring is the template parameter list now: the ports as the
+   * raw GPIOB_BASE integer addresses, the handle as a real pointer NTP
+   * (&hspi1), pins as GPIO_PIN_n. The MY|MV flags fold the MADCTL byte
+   * and swap the geometry sides (y_s 80 -> x_s 80) - everything is
+   * compile-time. */
+  using Lc = ST7789<&hspi1,
+         GPIOB_BASE, LCD__DC_Pin,        /* DC: PB2 */
+         0,          0,          false,  /* the module has CS tied to GND */
+         GPIOB_BASE, LCD_RES_Pin,        /* RST: PB10 */
+         st_240x240,
+         true, false, true, false>;      /* MY | MX | MV | BGR */
+
+  Lc lcd;
+
+  /* The Game is typed to this exact driver instantiation: the pools
+   * blit through its static print path, the lifecycle goes to this
+   * object. */
+  GameT<Lc> game(lcd);
+
+  /* Panel backlight: PWM on TIM1_CH1, as the old ST7789_Init did. */
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
+
+  game.init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
