@@ -12,13 +12,12 @@ class Shell final : public Entity<LcdT> {
 public:
   /* Re-export the dependent base members into this scope: hybrid by
    * usage census like tank.hpp. The round-trips stay bare - x/y/speed
-   * (4 sites each), clear (3); the rare frame (2), dir, h,
+   * (4 sites each); the rare clear (2), frame (2), dir, h,
    * updateImageWH (1 each) go through this->. In get_out() the this->
    * form is the only way anyway - the params shadow x/y/side/dir. */
   using Entity<LcdT>::x;
   using Entity<LcdT>::y;
   using Entity<LcdT>::speed;
-  using Entity<LcdT>::clear;
 
   bool life = true;
 
@@ -31,8 +30,6 @@ public:
 
   void get_out(int x, int y, int dir, int side);
   void explode();
-
-  ~Shell();
 };
 
 template <class LcdT>
@@ -90,7 +87,7 @@ void Shell<LcdT>::update(const int fld_x_end, const int fld_y_end)
   move(fld_x_end, fld_y_end);
 
   if (!life)
-    clear();
+    this->clear();
 }
 
 template <class LcdT>
@@ -109,11 +106,5 @@ void Shell<LcdT>::explode()
 {
   life = false;
 
-  clear();
-}
-
-template <class LcdT>
-Shell<LcdT>::~Shell()
-{
-  clear();
+  this->clear();
 }

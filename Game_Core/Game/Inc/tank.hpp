@@ -29,7 +29,7 @@ public:
    * template - a using keeps the method bodies as plain as the old
    * tank.cpp had them. Hybrid by usage census (bare sites per name):
    * the six round-trips stay bare - dir 10, x/y 9, speed 8, action 8,
-   * frame 5; the rare h (3), w (2), clear (2), side (1) sites go
+   * frame 5; the rare h (3), w (2), clear (1), side (1) sites go
    * through this-> instead of carrying a canalisation line each. */
   using Entity<LcdT>::x;
   using Entity<LcdT>::y;
@@ -54,8 +54,6 @@ public:
   bool kill() const;
   void rotate(int new_dir = 0);
   void respawn(int x, int y, int side);
-
-  ~Tank();
 };
 
 template <class LcdT>
@@ -289,10 +287,4 @@ bool Tank<LcdT>::kill() const
 
   this->clear();
   return true;
-}
-
-template <class LcdT>
-Tank<LcdT>::~Tank()
-{
-  this->clear();
 }
