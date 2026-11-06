@@ -31,7 +31,24 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+/* The display of this platform: SPI4 (TX-only, DMA TX), WeAct module
+ * on ST7735, native geometry 80x160 portrait. CS is wired (PE11) but
+ * the bus is the panel's own - single_device, the line is picked
+ * once in init() and never touched again. The module has no RST line
+ * wired - the rst_* parameters are 0. Black-tab panel (drk):
+ * portrait window offset 26/1.
+ *
+ * The wiring is the template parameter list now: the ports as the
+ * raw GPIOE_BASE integer addresses, the handle as a real pointer NTP
+ * (&hspi4), pins as GPIO_PIN_n. The MY|MV flags fold the MADCTL byte
+ * and swap the geometry sides (26/1 -> 1/26): the panel goes from
+ * portrait 80x160 to landscape 160x80 - everything is compile-time. */
+using Lcd = ST7735<&hspi4,
+       GPIOE_BASE, LCD__DC_Pin,        /* DC: PE13 */
+       GPIOE_BASE, LCD__CS_Pin, true,  /* CS: PE11, the bus is the panel's own */
+       0,          0,                  /* the module has no RST wired */
+       st_80x160_drk,
+       true, false, true, false>;      /* MY | MX | MV | BGR */
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -98,31 +115,12 @@ int main(void)
   MX_SPI4_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  /* The display of this platform: SPI4 (TX-only, DMA TX), WeAct module
-   * on ST7735, native geometry 80x160 portrait. CS is wired (PE11) but
-   * the bus is the panel's own - single_device, the line is picked
-   * once in init() and never touched again. The module has no RST line
-   * wired - the rst_* parameters are 0. Black-tab panel (drk):
-   * portrait window offset 26/1.
-   *
-   * The wiring is the template parameter list now: the ports as the
-   * raw GPIOE_BASE integer addresses, the handle as a real pointer NTP
-   * (&hspi4), pins as GPIO_PIN_n. The MY|MV flags fold the MADCTL byte
-   * and swap the geometry sides (26/1 -> 1/26): the panel goes from
-   * portrait 80x160 to landscape 160x80 - everything is compile-time. */
-  using Lc = ST7735<&hspi4,
-         GPIOE_BASE, LCD__DC_Pin,        /* DC: PE13 */
-         GPIOE_BASE, LCD__CS_Pin, true,  /* CS: PE11, the bus is the panel's own */
-         0,          0,                  /* the module has no RST wired */
-         st_80x160_drk,
-         true, false, true, false>;      /* MY | MX | MV | BGR */
-
-  Lc lcd;
+  Lcd lcd;
 
   /* The Game is typed to this exact driver instantiation: the pools
    * blit through its static print path, the lifecycle goes to this
    * object. */
-  GameT<Lc> game(lcd);
+  GameT game(lcd);
 
   /* Backlight: PE10 (LCD_BLK) is LEFT LOW - as the reference project
    * does while its panel is lit. This wiring keeps the backlight on

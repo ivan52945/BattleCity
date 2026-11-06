@@ -18,9 +18,9 @@ private:
   int x_shot;
   int y_shot;
   int frame_i;
-  int shot_cd = 0;
   const uint16_t (*frame_buff_directed)[TANK_FRAME_S];
   const uint16_t (*frame_buff)[T_FRMS_N][TANK_FRAME_S];
+  int shot_cd = 0;
   int ch_dir_cd = 0;
   int stuck_cnt = 0;
 public:
@@ -29,14 +29,15 @@ public:
    * template - a using keeps the method bodies as plain as the old
    * tank.cpp had them. Hybrid by usage census (bare sites per name):
    * the six round-trips stay bare - dir 10, x/y 9, speed 8, action 8,
-   * frame 5; the rare h (3), w (2), clear (1), side (1) sites go
-   * through this-> instead of carrying a canalisation line each. */
+   * frame 5 - plus side (1) kept bare by preference; the rest (h 3,
+   * w 2, clear 1) go through this-> instead of a canalisation line. */
   using Entity<LcdT>::x;
   using Entity<LcdT>::y;
   using Entity<LcdT>::dir;
+  using Entity<LcdT>::action;
+  using Entity<LcdT>::side;
   using Entity<LcdT>::speed;
   using Entity<LcdT>::frame;
-  using Entity<LcdT>::action;
 
   int life = 2;
   bool shot_st = false;
@@ -259,7 +260,7 @@ bool Tank<LcdT>::isShot(const int fld_x_end, const int fld_y_end)
 template <class LcdT>
 void Tank<LcdT>::shot(Shell<LcdT> &shell) const
 {
-  shell.get_out(x_shot, y_shot, dir, this->side);
+  shell.get_out(x_shot, y_shot, dir, side);
 }
 
 template <class LcdT>
