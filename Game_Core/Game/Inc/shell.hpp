@@ -10,15 +10,14 @@
 template <class LcdT>
 class Shell final : public Entity<LcdT> {
 public:
-  /* Re-export the dependent base members (all but `side` bare-used:
-   * get_out() sets it via this-> only - the param shadows it). */
+  /* Re-export the dependent base members into this scope: hybrid by
+   * usage census like tank.hpp. The round-trips stay bare - x/y/speed
+   * (4 sites each), clear (3); the rare frame (2), dir, h,
+   * updateImageWH (1 each) go through this->. In get_out() the this->
+   * form is the only way anyway - the params shadow x/y/side/dir. */
   using Entity<LcdT>::x;
   using Entity<LcdT>::y;
-  using Entity<LcdT>::dir;
-  using Entity<LcdT>::h;
   using Entity<LcdT>::speed;
-  using Entity<LcdT>::frame;
-  using Entity<LcdT>::updateImageWH;
   using Entity<LcdT>::clear;
 
   bool life = true;
@@ -39,19 +38,19 @@ public:
 template <class LcdT>
 Shell<LcdT>::Shell() : Entity<LcdT>(0, 0, 1, 3, 3, 1, MOVE, 1)
 {
-  frame = &shell_frames[0];
+  this->frame = &shell_frames[0];
 }
 
 template <class LcdT>
 Shell<LcdT>::Shell(const int x, const int y, const int dir, const int side) : Entity<LcdT>(x, y, 1, 3, 3, dir, MOVE, side)
 {
-  frame = &shell_frames[0];
+  this->frame = &shell_frames[0];
 }
 
 template <class LcdT>
 void Shell<LcdT>::move(const int fld_x_end, const int fld_y_end)
 {
-  switch (dir) {
+  switch (this->dir) {
     case UP:
       y -= speed;
       break;
@@ -68,7 +67,7 @@ void Shell<LcdT>::move(const int fld_x_end, const int fld_y_end)
       break;
   }
 
-  const int l_hlf = h / 2;
+  const int l_hlf = this->h / 2;
 
   if (x < l_hlf) {
     life = false;
@@ -102,7 +101,7 @@ void Shell<LcdT>::get_out(const int x, const int y, const int dir, const int sid
   life = true;
   this->side = side;
   this->dir = dir;
-  updateImageWH();
+  this->updateImageWH();
 }
 
 template <class LcdT>

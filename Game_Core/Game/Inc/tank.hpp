@@ -27,17 +27,16 @@ public:
   /* Re-export the dependent base members into this scope: the members
    * of Entity<LcdT> are visible only through the dependent base in a
    * template - a using keeps the method bodies as plain as the old
-   * tank.cpp had them (no this-> snowstorm). */
+   * tank.cpp had them. Hybrid by usage census (bare sites per name):
+   * the six round-trips stay bare - dir 10, x/y 9, speed 8, action 8,
+   * frame 5; the rare h (3), w (2), clear (2), side (1) sites go
+   * through this-> instead of carrying a canalisation line each. */
   using Entity<LcdT>::x;
   using Entity<LcdT>::y;
   using Entity<LcdT>::dir;
-  using Entity<LcdT>::side;
-  using Entity<LcdT>::w;
-  using Entity<LcdT>::h;
   using Entity<LcdT>::speed;
   using Entity<LcdT>::frame;
   using Entity<LcdT>::action;
-  using Entity<LcdT>::clear;
 
   int life = 2;
   bool shot_st = false;
@@ -115,7 +114,7 @@ void Tank<LcdT>::move(const int fld_x_end, const int fld_y_end)
       break;
   }
 
-  const int l_hlf = h / 2;
+  const int l_hlf = this->h / 2;
 
   if (x < l_hlf) {
     x = l_hlf;
@@ -174,7 +173,7 @@ template <class LcdT>
 void Tank<LcdT>::rotate(const int new_dir)
 {
   dir = (new_dir % 4);
-  this->frame_buff_directed = frame_buff[dir];
+  frame_buff_directed = frame_buff[dir];
   action = ROTATE;
   //updateImgWH();
   frame = &frame_buff_directed[frame_i][0];
@@ -232,16 +231,16 @@ bool Tank<LcdT>::isShot(const int fld_x_end, const int fld_y_end)
 
   switch (dir) {
     case UP:
-      y_shot -= (h / 2);
+      y_shot -= (this->h / 2);
       break;
     case DOWN:
-      y_shot += (h / 2);
+      y_shot += (this->h / 2);
       break;
     case LEFT:
-      x_shot -= (w / 2);
+      x_shot -= (this->w / 2);
       break;
     case RIGHT:
-      x_shot += (w / 2);
+      x_shot += (this->w / 2);
       break;
     default: break;
   }
@@ -262,7 +261,7 @@ bool Tank<LcdT>::isShot(const int fld_x_end, const int fld_y_end)
 template <class LcdT>
 void Tank<LcdT>::shot(Shell<LcdT> &shell) const
 {
-  shell.get_out(x_shot, y_shot, dir, side);
+  shell.get_out(x_shot, y_shot, dir, this->side);
 }
 
 template <class LcdT>
@@ -288,12 +287,12 @@ bool Tank<LcdT>::kill() const
   if (life > 0)
     return false;
 
-  clear();
+  this->clear();
   return true;
 }
 
 template <class LcdT>
 Tank<LcdT>::~Tank()
 {
-  clear();
+  this->clear();
 }
