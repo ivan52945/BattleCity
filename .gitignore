@@ -69,7 +69,7 @@ Testing/
 .cache/
 
 #IDE file
-/Platforms/STM32F401/.idea/
+.idea/
 
 # session experiment artifacts (objdump dumps etc.)
 tmp/
