@@ -287,5 +287,6 @@ bool Tank<LcdT>::kill() const
     return false;
 
   this->clear();
+
   return true;
 }

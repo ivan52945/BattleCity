@@ -15,7 +15,13 @@ constexpr int spawn_margin_px = 30;
 constexpr int spawn_slots = 7;
 
 /* Maximum simultaneous tanks per side. Upper bound for the side's
- * spawn slots count; the pool size (Lobby) must hold both sides. */
+ * spawn slots count; the pool size (Lobby) must hold both sides — and
+ * is derived from this knob in GameT, keep it the single source. */
 constexpr int units_per_side = 4;
+
+static_assert(units_per_side <= spawn_slots,
+              "quota above the spawn ladder: slots would saturate and "
+              "the booked-scan would run every frame");
+static_assert(units_per_side > 0, "quota must be positive");
 
 }

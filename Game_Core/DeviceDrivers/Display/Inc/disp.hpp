@@ -8,9 +8,9 @@
  * The shape is asymmetric by design and mirrors what the drivers
  * actually are:
  *
-   *   - The blit path (print_img) carries no per-object state anywhere
+ *   - The blit path (print) carries no per-object state anywhere
  *     (the transaction chain is fully parameterized by the wiring
- *     template arguments; the scratch belongs to fills only), so it
+ *     template arguments; the driver holds no buffers at all), so it
  *     is required as a STATIC member: Entity calls it with no object
  *     and no pointer, and the per-slot display pointer of the game
  *     core disappears with the stack it was costing.
@@ -33,7 +33,7 @@ concept Disp = requires(LcdT& lcd, uint16_t x, uint16_t y,
     lcd.select();
     lcd.unselect();
 
-    LcdT::print_img(x, y, w, h, img);
+    LcdT::print(x, y, w, h, img);
 
     { LcdT::w() } -> std::convertible_to<uint16_t>;
     { LcdT::h() } -> std::convertible_to<uint16_t>;

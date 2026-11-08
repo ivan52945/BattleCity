@@ -20,9 +20,6 @@
 template <Disp LcdT>
 class GameT {
 public:
-    int unit_n_cur[2] = {0, 0};
-    /* Simultaneous tanks quota per side (gameplay config). */
-    int unit_n_max[2] = {cfg::units_per_side, cfg::units_per_side};
     /* The panel geometry is a compile-time constant of the driver
      * instantiation (w()/h() are constexpr static members of the
      * type): the field edges fold at compile time - the loops pass
@@ -55,7 +52,13 @@ public:
     static constexpr std::array<std::array<point_t, cfg::spawn_slots>, 2>
         spawn_coords = make_spawn_coords();
 
-    Lobby<Tank<LcdT>, 20> tanks;
+    /* The tank pool is sized exactly by the single source of truth -
+     * the per-side quota, twice. The active count is capped at
+     * 2 x quota by the spawn guards, and corpse slots are culled in
+     * the closing passes of the same frame, so the pool never
+     * overflows: the sleep() null bail in spawn() is structurally
+     * unreachable and removed. */
+    Lobby<Tank<LcdT>, 2 * cfg::units_per_side> tanks;
     Lobby<Shell<LcdT>, 96> shells;
 
     GameT(LcdT& d) : disp(d) {}
@@ -107,16 +110,42 @@ template <Disp LcdT>
 void GameT<LcdT>::spawn()
 {
   for (int s_i = 0; s_i < 2; ++s_i)
+  {
+    /* The per-side live count is rebuilt once per frame straight
+     * from the Lobby state: the side lives on the entity as a tag,
+     * and the corpses of the previous frame were culled by the
+     * lull pass at its end - every active slot is a live tank
+     * here. The spawn/kill counter bookkeeping is gone; kills
+     * book nothing anywhere. The pass-level pin covers this scan
+     * only: each later pass reads the header fresh to see the
+     * earlier passes' spawns. */
+    const int n_before = tanks.active_n();
+
+    int n_side = 0;
+    for (int t_i = 0; t_i < n_before; ++t_i)
+      if (tanks[t_i]->side == s_i)
+        ++n_side;
+
     /* Linear scan of the side's slots: spawn into the first free
      * ones until the side's quota is met. Booked slots are retried
-     * on the following frames. */
-    for (int s = 0; s < cfg::spawn_slots && unit_n_cur[s_i] < unit_n_max[s_i]; ++s)
+     * on the following frames. The count is carried locally and
+     * bumped on each issued tank. */
+    for (int s = 0; s < cfg::spawn_slots && n_side < cfg::units_per_side; ++s)
     {
       const point_t pt = spawn_coords[s_i][s];
 
+      /* One header read per slot, not per scanned tank: is_booked()
+       * is an outlined call at -Os, the compiler reloaded the lobby
+       * header on every scan tick (int-vs-int TBAA over runtime GEP
+       * args, checked in the dump). The hoist sits at the slot level
+       * on purpose - the same-pass spawns of the earlier slots ARE
+       * booked into this slot's scan, a function-wide pin would
+       * freeze a stale count. */
+      const int n_live = tanks.active_n();
+
       bool booked = false;
 
-      for (int t_i = 0; t_i < tanks.active_n(); ++t_i)
+      for (int t_i = 0; t_i < n_live; ++t_i)
       {
         if (!is_booked(pt, *tanks[t_i]))
           continue;
@@ -127,16 +156,17 @@ void GameT<LcdT>::spawn()
       if (booked)
         continue;
 
+      /* Pool is quota-sized (2 x units_per_side) and active_n is
+       * capped by it at every spawn (deaths are culled in the same
+       * frame loop()), so sleep() hands a slot unconditionally. */
       Tank<LcdT>* free_tank = tanks.sleep();
-
-      if (!free_tank)
-        return;
 
       free_tank->respawn(pt.x, pt.y, s_i);
       tanks.activate();
 
-      unit_n_cur[s_i] += 1;
+      ++n_side;
     }
+  }
 }
 
 template <Disp LcdT>
@@ -164,13 +194,22 @@ void GameT<LcdT>::resolve_collision(Shell<LcdT> &shell, Tank<LcdT> &tank)
 
   if (shell.side == tank.side)
     return;
-  
+
+  /* Corpses take no book: the guard doubles as the kill() gate.
+   * kill() clears and answers true exactly at the zero crossing
+   * (armored hits keep life > 0 and kill() answers false), and a
+   * re-fire on the same corpse is pre-blocked at the top. The
+   * spawn quota is rebuilt from the Lobby side tags at each
+   * spawn() - kills book nothing. */
+  if (tank.life <= 0)
+    return;
+
   if (abs(shell.dir - tank.dir) == 2)
     tank.life -= 1;
   else
     tank.life -= 2;
 
-  unit_n_cur[tank.side] -= (tank.kill()) ? 1 : 0;
+  tank.kill();
 }
 
 template <Disp LcdT>
@@ -183,11 +222,31 @@ void GameT<LcdT>::loop()
 
   spawn();
 
-  for (int t_i = 0; t_i < tanks.active_n(); ++t_i)
+  /* The tank lobby header is read once for the whole sim phase: no
+   * pool state mutates between here and the closing lull pass -
+   * kill() only drains lives, corpses stay active, and the pool
+   * issued into during this phase is the shells one. At -Os
+   * update()/resolve_collision()/isShot() stay outlined, and an
+   * outlined call is an open write set for the compiler (the args
+   * are runtime GEPs into this same object, int-vs-int TBAA doesn't
+   * separate the lobby header from an int member) - it reloaded
+   * active_n on every tick of every loop below. This pin turns it
+   * into a callee-saved register across all of them. The frame's
+   * four pin reads live at their own points of freshness (pool
+   * counts shift between the points): n_tanks here, n_shells after
+   * the tank phase (its shots grew the shells pool), the two draw
+   * reads after the lull passes. */
+  const int n_tanks = tanks.active_n();
+
+  for (int t_i = 0; t_i < n_tanks; ++t_i)
   {
     tanks[t_i]->update(fld_x_end, fld_y_end);
-    for (int t_c = 0; t_c < tanks.active_n(); ++t_c)
+
+    for (int t_c = 0; t_c < n_tanks; ++t_c)
     {
+      /* The (i, i) pair is poisoned without this check: the tank
+       * overlaps itself at zero distance and would push itself
+       * (resolve() is asymmetric) every frame. */
       if (t_c == t_i) continue;
 
       resolve_collision(*tanks[t_i], *tanks[t_c]);
@@ -210,13 +269,25 @@ void GameT<LcdT>::loop()
    * ignored (CS high). */
   disp.select();
 
-  for (int s_i = 0; s_i < shells.active_n(); ++s_i)
+  /* Fresh read: the shells issued in the tank phase above are
+   * already counted in active_n here. The pool is stable through
+   * this phase (explode() only drops life flags), so the outer
+   * bound is read once instead of per tick as well. */
+  const int n_shells = shells.active_n();
+
+  for (int s_i = 0; s_i < n_shells; ++s_i)
   {
     if (!(shells[s_i]->life)) continue;
 
     shells[s_i]->update(fld_x_end,fld_y_end);
 
-    for (int t_i = 0; t_i < tanks.active_n(); ++t_i)
+    /* The tank catches everything it overlaps, even the frame it
+     * went down in - shells explode on the fresh corpse. Kills book
+     * nothing anywhere (the spawn quota is rebuilt from the Lobby
+     * side tags each frame); the life guard inside
+     * resolve_collision() exists only for the kill() contract, an
+     * extra hit on a corpse neither re-clears nor desyncs anything. */
+    for (int t_i = 0; t_i < n_tanks; ++t_i)
       resolve_collision(*shells[s_i], *tanks[t_i]);
   }
 
@@ -227,10 +298,16 @@ void GameT<LcdT>::loop()
   for (const Tank<LcdT>* tank = tanks.start(); tanks.is_nEnd(); tank = tanks.next())
     if (tank->life < 1) tanks.lull();
 
-  for (int t_i = 0; t_i < tanks.active_n(); ++t_i)
+  /* Fresh reads for the draw phase: both lull passes above shrank
+   * the pools, and print() mutates nothing, so each count is stable
+   * for its whole pass - both pins pair up next to each other. */
+  const int n_draw_tanks = tanks.active_n();
+  const int n_draw_shells = shells.active_n();
+
+  for (int t_i = 0; t_i < n_draw_tanks; ++t_i)
     tanks[t_i]->print();
 
-  for (int s_i = 0; s_i < shells.active_n(); ++s_i)
+  for (int s_i = 0; s_i < n_draw_shells; ++s_i)
     shells[s_i]->print();
 
   disp.unselect();
