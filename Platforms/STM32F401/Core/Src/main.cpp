@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include "game.hpp"
 #include "st7789.hpp"
+#include "assets.hpp" /* disp_clear_240x16, the CLEAR_IMG of the instantiation below */
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,7 +59,10 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+/* The boot-clear strip asset lives in Game assets.cpp (disp_clear_240x16,
+ * defined under STM32F401xC); the instantiation below takes its address
+ * as CLEAR_IMG. CLEAR_ROWS 16 = 15 prints per init, one DMA engagement
+ * per print. */
 /* USER CODE END 0 */
 
 /**
@@ -109,7 +113,8 @@ int main(void)
          0,          0,          false,  /* the module has CS tied to GND */
          GPIOB_BASE, LCD_RES_Pin,        /* RST: PB10 */
          st_240x240,
-         true, false, true, false>;      /* MY | MX | MV | BGR */
+         true, false, true, false,       /* MY | MX | MV | BGR */
+         &disp_clear_240x16[0], 16>;     /* boot-clear strip: 240x16, 15 prints */
 
   Lc lcd;
 

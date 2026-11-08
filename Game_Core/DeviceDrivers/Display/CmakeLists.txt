@@ -19,14 +19,8 @@ target_include_directories(${TARGET_LIB} INTERFACE Inc)
 target_link_libraries(${TARGET_LIB} INTERFACE
     stm32cubemx)
 
-# Reserved data - Src/fonts.c (three text fonts + one test image compiled
-# part; saber) stays OUT of the build (see TODO item C): the HAL-less C
-# source is kept on disk only until a text HUD or panel test may need it.
-# To re-enable it, declare a tiny STATIC target next to the interface:
-#
-# add_library(display_res STATIC Src/fonts.c)   # no HAL includes needed
-# target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE display_res)
-#
-# ...or simply reference the data symbols from some TU (the archive member
-# gets pulled then). Until then/write_char-instantiation the reference to
-# Font_7x10/Font_11x18/Font_16x26 from st7789.hpp stays unresolved by design.
+# Reserved data note: there is no compiled C in this module. A future
+# text HUD goes through sprite/digit assets (assets.cpp recipe) like any
+# other panel data; if a raw C font archive is ever revived, declare a
+# small STATIC target next to this interface - the INTERFACE target
+# cannot host compiled sources.

@@ -268,3 +268,23 @@ __attribute__((aligned(32))) const uint16_t shell_frames[SHEL_FRAME_S] = {
 
 /* All-zero clear pattern; zero-initialized (rodata zerofill). */
 __attribute__((aligned(32))) const uint16_t img_clear[TANK_FRAME_S] = {};
+
+/* Boot-clear strips of the display drivers (externs in assets.hpp):
+ * geo.w x CLEAR_ROWS = 16 entries each, blitted block by block in
+ * init() (one DMA engagement per print instead of the per-row
+ * filling). All-zero bodies ship as rodata zerofill - flash, not
+ * RAM, same recipe as img_clear; aligned(32) keeps the halfword/
+ * burst DMA reads page-friendly. Each strip is defined only under
+ * the platform whose driver instantiation consumes it (the
+ * board toolchain defines: STM32F401xC / STM32H743xx per the Cube
+ * MX_Defines_Syms); the host build carries none. CLEAR_ROWS is the
+ * lever between asset size in flash and the engagement count - the
+ * driver argument and this asset are one piece of wiring, resize
+ * them together. */
+#if defined(STM32F401xC)
+__attribute__((aligned(32))) const uint16_t disp_clear_240x16[240 * 16] = {};
+#endif
+
+#if defined(STM32H743xx)
+__attribute__((aligned(32))) const uint16_t disp_clear_160x16[160 * 16] = {};
+#endif

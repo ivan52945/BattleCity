@@ -1,0 +1,8 @@
+# Normalization rule for the mixed WSL/Windows repo: every add
+# converts CRLF->LF at blob level from either environment
+# (attributes override core.autocrlf), checkout stays
+# environment-driven (Windows writes CRLF, WSL leaves LF).
+* text=auto
+
+# Never touch binary blobs.
+*.7z binary

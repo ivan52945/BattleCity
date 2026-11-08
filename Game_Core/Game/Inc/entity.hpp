@@ -18,7 +18,7 @@ enum act_t {
 
 /* The docking point: the Game Core is typed against the concrete
  * (final) driver class. The blit path calls the driver's static
- * print_img without any object or pointer - the transaction chain of
+ * print without any object or pointer - the transaction chain of
  * the wiring carries no per-object state, so the panel identity lives
  * in the type alone. Lifecycle (init/select/unselect) goes to the one
  * driver object held by the Game. No display header is included
@@ -90,49 +90,63 @@ void Entity<LcdT>::print() const
   {
     switch (dir) {
       case UP:
-        LcdT::print_img(x - w_r, y + (h_r + 1), w_img, speed, img_clear);
+        LcdT::print(x - w_r, y + (h_r + 1), w_img, speed, img_clear);
         break;
       case DOWN:
-        LcdT::print_img(x - w_r, y - (h_r + speed), w_img, speed, img_clear);
+        LcdT::print(x - w_r, y - (h_r + speed), w_img, speed, img_clear);
         break;
       case LEFT:
-        LcdT::print_img(x + (w_r + 1), y - h_r, speed, h_img, img_clear);
+        LcdT::print(x + (w_r + 1), y - h_r, speed, h_img, img_clear);
         break;
       case RIGHT:
-        LcdT::print_img(x - (w_r + speed), y - h_r, speed, h_img, img_clear);
+        LcdT::print(x - (w_r + speed), y - h_r, speed, h_img, img_clear);
         break;
       default: break;
     }
   }
 
-  LcdT::print_img(x - w_r, y - h_r, w_img, h_img, frame);
+  LcdT::print(x - w_r, y - h_r, w_img, h_img, frame);
 }
 
 template <class LcdT>
 void Entity<LcdT>::clear() const
 {
+  /* Erase the rect where the screen actually holds the sprite. The
+   * caller keeps action true to this frame's net displacement: MOVE
+   * = the full step went, print() last frame drew the sprite speed
+   * px against dir of here - the shift walks back to it. BLOCK
+   * (edge clamp, tank-tank bounce) = zero net move, the sprite is
+   * still at x/y. A clear placed by the wrong branch wipes one rect
+   * off: the far edge row/column stays as a 13x1 ghost line no later
+   * pass ever visits - the wall-pressed deaths used to bequeath it
+   * to the field rim. Shells always walk the MOVE branch: their
+   * frame always holds the full speed, their action never leaves
+   * MOVE. */
   const uint16_t w_r = w_img / 2;
   const uint16_t h_r = h_img / 2;
 
   int x_t = x;
   int y_t = y;
-
-  switch (dir) {
-    case UP:
-      y_t += speed;
-      break;
-    case DOWN:
-      y_t -= speed;
-      break;
-    case LEFT:
-      x_t += speed;
-      break;
-    case RIGHT:
-      x_t -= speed;
-      break;
-    default: break;
+  if (action == MOVE)
+  {
+    switch (dir) {
+      case UP:
+        y_t += speed;
+        break;
+      case DOWN:
+        y_t -= speed;
+        break;
+      case LEFT:
+        x_t += speed;
+        break;
+      case RIGHT:
+        x_t -= speed;
+        break;
+      default: break;
+    }
   }
-  LcdT::print_img(x_t - w_r, y_t - h_r, w_img, h_img, img_clear);
+
+  LcdT::print(x_t - w_r, y_t - h_r, w_img, h_img, img_clear);
 }
 
 template <class LcdT>

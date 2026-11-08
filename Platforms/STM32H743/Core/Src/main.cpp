@@ -27,10 +27,16 @@
 /* USER CODE BEGIN Includes */
 #include "game.hpp"
 #include "st7735.hpp"
+#include "assets.hpp" /* disp_clear_160x16, the CLEAR_IMG of the alias below */
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+/* The boot-clear strip asset lives in Game assets.cpp (disp_clear_160x16,
+ * defined under STM32H743xx); the alias below takes its address as
+ * CLEAR_IMG. CLEAR_ROWS 16 = 5 prints per init, one DMA engagement
+ * per print. */
+
 /* The display of this platform: SPI4 (TX-only, DMA TX), WeAct module
  * on ST7735, native geometry 80x160 portrait. CS is wired (PE11) but
  * the bus is the panel's own - single_device, the line is picked
@@ -48,7 +54,8 @@ using Lcd = ST7735<&hspi4,
        GPIOE_BASE, LCD__CS_Pin, true,  /* CS: PE11, the bus is the panel's own */
        0,          0,                  /* the module has no RST wired */
        st_80x160_drk,
-       true, false, true, false>;      /* MY | MX | MV | BGR */
+       true, false, true, false,       /* MY | MX | MV | BGR */
+       &disp_clear_160x16[0], 16>;     /* boot-clear strip: 160x16, 5 prints */
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/

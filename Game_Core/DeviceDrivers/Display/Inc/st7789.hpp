@@ -1,23 +1,17 @@
 #pragma once
 
-#include "fonts.h"
-#include "color.h"
 #include "main.h"
+#include <cstdint>
 
 /* The docking point: the driver plugs in as the typed display of the
  * Game Core - GameT<Tank<LcdT>> with LcdT = this exact instantiation
- * dials the members below directly, no interface idiom in between. */
-#include <cstdint>
-#include <cstring> /* memcpy */
-
-#define BUFF_W 240
-#define BUFF_H 320
-
-/* A full-frame buffer of BUFF_W x BUFF_H does not fit into the 64KB RAM
- * of the target MCU. The driver generates its own patterns (fill
- * lines, glyphs) chunk by chunk in this scratch. It must fit one fill
- * line (BUFF_W entries) and the largest font glyph (Font_16x26). */
-#define ST7789_SCRATCH  (BUFF_W > (16 * 26) ? BUFF_W : (16 * 26))
+ * dials the members below directly, no interface idiom in between.
+ *
+ * The driver streams the panel directly from caller-owned sources:
+ * no framebuffer, no scratch, no generated patterns at runtime. The
+ * boot clear is a flash strip asset (CLEAR_IMG below) blitted in
+ * per-instance row blocks; everything else on the panel is a caller
+ * print() of some const array. */
 
 enum st7789_sizes {
     st_240x320,
@@ -38,7 +32,6 @@ typedef struct  {
 #define COL_MOD   0x3A
 #define COL_565   0x55
 #define MAD_CTL   0x36
-#define INV_OFF   0x20
 #define INV__ON   0x21
 #define CA_SET    0x2A
 #define RA_SET    0x2B
@@ -62,7 +55,7 @@ typedef struct  {
  * parameter list. There is no wiring struct anymore: every constant of
  * the wiring is a non-type template argument the compiler stamps into
  * the transaction bodies, and the driver object carries no wiring
- * fields at all - only its streaming scratch. A line the module does
+ * fields at all - no state of any kind. A line the module does
  * not wire is passed as 0 and its branch folds away entirely. The
  * parameter semantics are the same as in st7735.hpp:
  *
@@ -86,19 +79,25 @@ typedef struct  {
  *                 XY_CHG folds the geometry below (w/h and the window
  *                 offsets swap), the init() command table becomes a
  *                 fully constexpr array.
- * The fonts (FontDef) stay a runtime value here: they are data of the
- * text functions, not of the wiring.
+ *   CLEAR_IMG  - pointer NTP to the boot-clear strip asset: the
+ *                 flash-resident const array of the instantiation TU
+ *                 (like &hspi1, the address links in; the pixels stay
+ *                 outside the driver). The strip is geo.w x CLEAR_ROWS
+ *                 entries of the panel's stream order - init() blits
+ *                 it down the panel block by block.
+ *   CLEAR_ROWS - rows of the strip blitted per print: the lever
+ *                 between asset size in flash and the number of DMA
+ *                 engagements of the boot clear. Must divide h().
  */
 template <SPI_HandleTypeDef* HSPI,
           std::uintptr_t DC_ADDR, uint32_t DC_PIN,
           std::uintptr_t CS_ADDR, uint32_t CS_PIN, bool SINGLE,
           std::uintptr_t RST_ADDR, uint32_t RST_PIN,
           st7789_sizes SIZES,
-          bool Y_INV, bool X_INV, bool XY_CHG, bool COL_BGR>
+          bool Y_INV, bool X_INV, bool XY_CHG, bool COL_BGR,
+          const uint16_t* CLEAR_IMG, uint32_t CLEAR_ROWS>
 class ST7789 final
 {
-    uint16_t scratch[ST7789_SCRATCH];
-
 public:
     struct geometry {
         uint32_t w;
@@ -110,9 +109,9 @@ public:
         uint32_t y_s;
     };
 
-    /* The window offset table of the configured size, with MV applied:
-     * the swap of w/h and of the offsets is a compile-time operation
-     * here - this is where the init()-time geometry switch moved. */
+    /* The window offset table of the configured size. The XY swap
+     * (MV): w/h and the offsets exchange in compile time - the init()
+     * command table stays fully constexpr. */
     static constexpr geometry make_geo()
     {
         geometry g = {.w = 0, .h = 0, .x_s = 0, .y_s = 0};
@@ -151,6 +150,12 @@ public:
     /* The panel geometry of this instantiation - a compile-time
      * constant. */
     static constexpr geometry geo = make_geo();
+
+    /* The boot clear covers the panel with strips: the strip height
+     * must tile the panel height exactly - the print path streams the
+     * window contiguously, a clipped tail block has no honest way in. */
+    static_assert(geo.h % CLEAR_ROWS == 0,
+                  "CLEAR_ROWS must divide the panel height");
 
     /* The port materializers: the integer template constant enters the
      * bodies as an immediate (or a literal-pool word when the address
@@ -219,7 +224,7 @@ public:
         //  table below): single-device bus picks directly into the GPIO
         //  and is never touched again; a shared bus goes through
         //  select() per usual. The cycle closes by unselect() at the end
-        //  of this method (after the clear fill_rect).
+        //  of this method (after the clear strips).
         if (CS_ADDR && SINGLE)
             HAL_GPIO_WritePin(cs_port(), CS_PIN, GPIO_PIN_RESET);
         else
@@ -230,7 +235,12 @@ public:
             ST7789_InitCMD(&cmd[i]);
         }
 
-        fill_rect(0, 0, geo.w, geo.h, 0x0000);
+        //  Boot clear: the flash strip asset (geo.w x CLEAR_ROWS
+        //  entries, stamped per instantiation) runs down the panel in
+        //  row blocks - no scratch, no generated pattern, the fill
+        //  source is plain const data DMA-ed straight out of flash.
+        for (uint32_t y = 0; y < geo.h; y += CLEAR_ROWS)
+            print(0, (uint16_t)y, (uint16_t)geo.w, CLEAR_ROWS, CLEAR_IMG);
 
         //  The init() drawing cycle closes here: a shared bus releases
         //  CS (the Game then picks the device per its drawing cycles);
@@ -242,12 +252,17 @@ public:
     /* Static blit: no per-object state anywhere on the print path
      * (the transaction chain is wired by the template arguments), so
      * Entity dials the type directly and the per-slot display pointer
-     * of the core is gone. noinline keeps each core call site one
+     * of the core is gone. This is the whole drawing surface of the
+     * driver: set the window, stream the caller's pixels - flash
+     * assets, LVGL-style RAM buffers, anything - as long as the source is
+     * contiguous over w x h. noinline keeps each core call site one
      * 'bl' - the inlined SetWindow+DMA body (~300 B) would replicate
      * in every print/clear site otherwise. */
-    __attribute__((noinline)) static void print_img(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t img[])
+    __attribute__((noinline)) static void print(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t img[])
     {
-        draw_image(x, y, w, h, img);
+        ST7789_SetWindow(x, y, x + w - 1, y + h - 1);
+
+        ST7789_BigDAT(reinterpret_cast<const uint8_t *>(&img[0]), w * h * 2);
     }
 
     /* User-led CS control: the driver never touches the line inside
@@ -275,96 +290,6 @@ public:
      * spawn ladder from these at compile time). */
     static constexpr uint16_t w()  { return (uint16_t)geo.w; }
     static constexpr uint16_t h() { return (uint16_t)geo.h; }
-
-    /* Driver-specific primitives (stateless: the wiring NTPs are
-     * the whole state). */
-    static void draw_image(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t data[])
-    {
-        ST7789_SetWindow(x, y, x + w - 1, y + h - 1);
-
-        ST7789_BigDAT(reinterpret_cast<const uint8_t *>(&data[0]), w * h * 2);
-    }
-
-    void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
-    {
-        if ((w == 0) || (h == 0))
-            return;
-
-        ST7789_SetWindow(x, y, x + w - 1, y + h - 1);
-
-        //  The window is streamed in scanline batches: no full-frame buffer
-        //  is kept, the scratch only holds chunk_n lines max. The LCD write
-        //  cursor walks the window sequentially, so the chunks are accepted
-        //  one after another without re-setting the window.
-        uint32_t chunk_n = ST7789_SCRATCH / w;
-        if (chunk_n < 1)
-            chunk_n = 1;
-        else if (chunk_n > h)
-            chunk_n = h;
-
-        for (uint32_t j = 0; j < w; ++j)
-            scratch[j] = color;
-
-        for (uint32_t l = 1; l < chunk_n; ++l)
-            memcpy(&scratch[l * w], &scratch[0], w * sizeof(scratch[0]));
-
-        uint32_t sent = 0;
-        while (sent < h)
-        {
-            uint32_t lines = (h - sent < chunk_n) ? (h - sent) : chunk_n;
-
-            ST7789_BigDAT(reinterpret_cast<const uint8_t *>(&scratch[0]), lines * w * 2);
-
-            sent += lines;
-        }
-    }
-
-    /* Text functions. */
-    void write_char(uint16_t x, uint16_t y, char ch, FontDef font, uint16_t color, uint16_t bgcolor)
-    {
-        if (font.width * font.height > ST7789_SCRATCH)
-            return;
-
-        uint32_t b;
-        uint16_t n = 0;
-
-        for (uint32_t i = 0; i < font.height; ++i)
-        {
-            b = font.data[(ch - 32) * font.height + i];
-            for (uint32_t j = 0; j < font.width; ++j)
-            {
-                scratch[n] = ((b << j) & 0x8000) ? color : bgcolor;
-                n++;
-            }
-        }
-
-        draw_image(x, y, font.width, font.height, &scratch[0]);
-    }
-
-    void write_string(uint16_t x, uint16_t y, const char* str, FontDef font, uint16_t color, uint16_t bgcolor)
-    {
-        while (*str)
-        {
-            if (x + font.width >= geo.w)
-            {
-                x = 0;
-                y += font.height;
-                if (y + font.height >= geo.h)
-                    break;
-
-                if (*str == ' ')
-                {
-                    // skip spaces in the beginning of the new line
-                    str++;
-                    continue;
-                }
-            }
-
-            write_char(x, y, *str, font, color, bgcolor);
-            x += font.width;
-            str++;
-        }
-    }
 
 private:
     static void ST7789_TrnsmtCMD(uint8_t cmd)
