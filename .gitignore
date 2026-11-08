@@ -71,6 +71,9 @@ Testing/
 #IDE file
 .idea/
 
+#CubeMX generated state
+.mxproject
+
 # session experiment artifacts (objdump dumps etc.)
 tmp/
 
