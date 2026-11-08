@@ -36,17 +36,20 @@ static uint8_t *__sbrk_heap_end = NULL;
  *
  * @verbatim
  * ############################################################################
- * #  .data  #  .bss  #       newlib heap       #          MSP stack          #
- * #         #        #                         # Reserved by _Min_Stack_Size #
+ * #  .data  #  .bss  #       newlib heap       #
+ * #         #        #                         #
  * ############################################################################
- * ^-- RAM start      ^-- _end                             _estack, RAM end --^
+ * ^-- RAM start      ^-- _end                  _heap_end, RAM end --^
+ *
+ * The MSP stack is not in this picture anymore: it lives at the DTCM
+ * end (_estack = 0x20020000, grows down) - CPU-private, DMA-invisible.
  * @endverbatim
  *
  * This implementation starts allocating at the '_end' linker symbol
- * The '_Min_Stack_Size' linker symbol reserves a memory for the MSP stack
- * The implementation considers '_estack' linker symbol to be RAM end
- * NOTE: If the MSP stack, at any point during execution, grows larger than the
- * reserved size, please increase the '_Min_Stack_Size'.
+ * The implementation considers '_heap_end' linker symbol to be RAM end
+ * NOTE: if malloc ever becomes a real consumer, size it against the
+ * '.bss - .data + heap' picture above - the stack no longer shares
+ * this region with the heap.
  *
  * @param incr Memory size
  * @return Pointer to allocated memory
@@ -54,10 +57,11 @@ static uint8_t *__sbrk_heap_end = NULL;
 void *_sbrk(ptrdiff_t incr)
 {
   extern uint8_t _end; /* Symbol defined in the linker script */
-  extern uint8_t _estack; /* Symbol defined in the linker script */
-  extern uint32_t _Min_Stack_Size; /* Symbol defined in the linker script */
-  const uint32_t stack_limit = (uint32_t)&_estack - (uint32_t)&_Min_Stack_Size;
-  const uint8_t *max_heap = (uint8_t *)stack_limit;
+  extern uint8_t _heap_end; /* Heap bound: end of the AXI RAM region.
+     The stack now lives in the DTCM, _estack is 0x20020000 - a
+     heap-side no-man's-land (the DMA masters cannot even reach
+     it), so the grow-into-stack guard points at _heap_end. */
+  const uint8_t *max_heap = (uint8_t *)&_heap_end;
   uint8_t *prev_heap_end;
 
   /* Initialize heap end at first call */
