@@ -69,7 +69,13 @@ Testing/
 .cache/
 
 #IDE file
-/Platforms/STM32F401/.idea/
+.idea/
+
+#CubeMX generated state
+.mxproject
 
 # session experiment artifacts (objdump dumps etc.)
-tmp/template_exp/
+tmp/
+
+# local notes
+TODO.md
