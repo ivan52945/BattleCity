@@ -72,4 +72,7 @@ Testing/
 /Platforms/STM32F401/.idea/
 
 # session experiment artifacts (objdump dumps etc.)
-tmp/template_exp/
+tmp/
+
+# local notes
+TODO.md
