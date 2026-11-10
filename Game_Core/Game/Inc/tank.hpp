@@ -2,6 +2,7 @@
 
 #include <assets.hpp>
 #include "shell.hpp"
+#include "map.hpp"
 #include "entity.hpp"
 #include <cstdlib> /* rand */
 
@@ -46,10 +47,10 @@ public:
 
   Tank(int x, int y, int dir, int side);
 
-  void move(int fld_x_end, int fld_y_end);
-  void update(int fld_x_end, int fld_y_end);
+  void move(int fld_x_end, int fld_y_end, MapT<LcdT> &map);
+  void update(int fld_x_end, int fld_y_end, MapT<LcdT> &map);
   bool isShot(const int fld_x_end, const int fld_y_end);
-  void back(bool stuck = false);
+  void back(bool stuck, MapT<LcdT> &map);
   void shot(Shell<LcdT> &shell) const;
   void setSide(int side);
   bool kill() const;
@@ -90,12 +91,15 @@ void Tank<LcdT>::setSide(const int side)
 }
 
 template <class LcdT>
-void Tank<LcdT>::move(const int fld_x_end, const int fld_y_end)
+void Tank<LcdT>::move(const int fld_x_end, const int fld_y_end, MapT<LcdT>& map)
 {
   action = MOVE;
   /* ch_dir_cd here is NOT incremented: the direction-pump cooldown has
    * a single accounting site in update() (+1 per frame). */
-  
+
+  const int x_prev = x;
+  const int y_prev = y;
+
   switch (dir) {
     case UP:
       y -= speed;
@@ -125,7 +129,7 @@ void Tank<LcdT>::move(const int fld_x_end, const int fld_y_end)
     action = BLOCK;
     stuck_cnt += 1;
   }
-  
+
   if (y < l_hlf) {
     y = l_hlf;
     action = BLOCK;
@@ -136,14 +140,36 @@ void Tank<LcdT>::move(const int fld_x_end, const int fld_y_end)
     y = fld_y_end - l_hlf;
     action = BLOCK;
   }
-  
+
+  /* Map walls: a step onto a solid cell does not pass - the step
+   * reverts (net zero - the BLOCK contract of print()/clear() holds,
+   * no trail to wipe), the stuck pump feeds on it like on the edge
+   * clamp and turns the tank away. No lateral alignment jumps: the
+   * hull stays where the last honest step left it. The hull is the
+   * plain w/h - the square sprite rotates to itself, and the house
+   * collision convention (resolve_collision) runs on w/h. */
+  const int wr = this->w / 2;
+  const int hr = this->h / 2;
+
+  if (map.blocks(x - wr, y - hr, this->w, this->h))
+  {
+    x = x_prev;
+    y = y_prev;
+
+    action = BLOCK;
+    stuck_cnt += 1;
+  }
+
   frame_i = (frame_i + 1) % T_FRMS_N;
   frame = &frame_buff_directed[frame_i][0];
 }
 
 template <class LcdT>
-void Tank<LcdT>::back(const bool stuck)
+void Tank<LcdT>::back(const bool stuck, MapT<LcdT>& map)
 {
+  const int x_prev = x;
+  const int y_prev = y;
+
   switch (dir) {
     case UP:
       y += speed;
@@ -160,7 +186,21 @@ void Tank<LcdT>::back(const bool stuck)
     default:
       break;
   }
-  
+
+  /* The push-back must not shove the hull into a map wall: the wall
+   * face eats the push (the two tanks stay touching, the pushed one
+   * keeps its ground instead of being buried in the brick - and a
+   * buried hull never steps out, every further step blocks on the
+   * same overlap). */
+  const int wr = this->w / 2;
+  const int hr = this->h / 2;
+
+  if (map.blocks(x - wr, y - hr, this->w, this->h))
+  {
+    x = x_prev;
+    y = y_prev;
+  }
+
   if (stuck) {
     stuck_cnt += (stuck_cnt < 10) ? 1 : 0;
     action = BLOCK;
@@ -179,7 +219,7 @@ void Tank<LcdT>::rotate(const int new_dir)
 }
 
 template <class LcdT>
-void Tank<LcdT>::update(const int fld_x_end, const int fld_y_end)
+void Tank<LcdT>::update(const int fld_x_end, const int fld_y_end, MapT<LcdT>& map)
 {
   /* Direction pump: every 35 honest frames (ch_dir_cd counts +1 per
    * frame, a single accounting site) roll ~36%. Hit - rotate.
@@ -199,7 +239,7 @@ void Tank<LcdT>::update(const int fld_x_end, const int fld_y_end)
   else
     ch_dir_cd += 1;
   
-  move(fld_x_end, fld_y_end);
+  move(fld_x_end, fld_y_end, map);
   
   /* Fire roll: honestly probabilistic (was rand()/4096 - a typo that
    * made the roll ~100% true, i.e. plated periodic fire). After the

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <assets.hpp>
+#include "map.hpp"
 #include "entity.hpp"
 
 #define SHELL_LENGTH 3
@@ -25,8 +26,8 @@ public:
 
   Shell(int x, int y, int dir, int side);
 
-  void move(int fld_x_end, int fld_y_end);
-  void update(int fld_x_end, int fld_y_end);
+  void move(int fld_x_end, int fld_y_end, MapT<LcdT> &map);
+  void update(int fld_x_end, int fld_y_end, MapT<LcdT> &map);
 
   void get_out(int x, int y, int dir, int side);
   void explode();
@@ -45,7 +46,7 @@ Shell<LcdT>::Shell(const int x, const int y, const int dir, const int side) : En
 }
 
 template <class LcdT>
-void Shell<LcdT>::move(const int fld_x_end, const int fld_y_end)
+void Shell<LcdT>::move(const int fld_x_end, const int fld_y_end, MapT<LcdT>& map)
 {
   switch (this->dir) {
     case UP:
@@ -79,12 +80,23 @@ void Shell<LcdT>::move(const int fld_x_end, const int fld_y_end)
   else if (y > (fld_y_end - l_hlf)) {
     life = false;
   }
+
+  /* The map: steel kills the shell, water lets it pass, the brick
+   * cells under the hull are blown away (marked; the draw phase
+   * repaints them) and kill it. The hull is the oriented form
+   * (w_img/h_img) - the stored w/h is the vertical one only, the
+   * horizontal flight is 3x1. */
+  const int wr = this->w_img / 2;
+  const int hr = this->h_img / 2;
+
+  if (map.hit(x - wr, y - hr, this->w_img, this->h_img))
+    life = false;
 }
 
 template <class LcdT>
-void Shell<LcdT>::update(const int fld_x_end, const int fld_y_end)
+void Shell<LcdT>::update(const int fld_x_end, const int fld_y_end, MapT<LcdT>& map)
 {
-  move(fld_x_end, fld_y_end);
+  move(fld_x_end, fld_y_end, map);
 
   if (!life)
     this->clear();

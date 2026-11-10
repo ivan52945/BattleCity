@@ -21,6 +21,16 @@ extern const uint16_t tank_enemy_frames[SIDES][T_FRMS_N][TANK_FRAME_S];
 
 extern const uint16_t shell_frames[SHEL_FRAME_S];
 
+/* Terrain sprites of the map (map.hpp): one MAP_SPR x MAP_SPR 565
+ * frame per kind, flash-resident const arrays of assets.cpp - the
+ * same recipe as the tank/shell frames. */
+#define MAP_SPR         8
+
+extern const uint16_t map_brick[MAP_SPR * MAP_SPR];
+extern const uint16_t map_steel[MAP_SPR * MAP_SPR];
+extern const uint16_t map_water[MAP_SPR * MAP_SPR];
+extern const uint16_t map_bush[MAP_SPR * MAP_SPR];
+
 extern const uint16_t img_clear[TANK_FRAME_S];
 
 /* Boot-clear strips of the display drivers (see assets.cpp): the

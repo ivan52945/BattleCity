@@ -24,4 +24,9 @@ static_assert(units_per_side <= spawn_slots,
               "the booked-scan would run every frame");
 static_assert(units_per_side > 0, "quota must be positive");
 
+/* Map grid cell, px. The terrain sprites are authored at this size
+ * (MAP_SPR in assets.hpp; map.hpp static_asserts the match) and both
+ * platform panels divide by it exactly (240/160/80). */
+constexpr int map_cell_px = 8;
+
 }
