@@ -58,6 +58,9 @@ compile_commands.json
 *.bak
 *.swp
 
+# Python bytecode
+__pycache__/
+
 # vcpkg
 vcpkg_installed/
 
@@ -76,6 +79,9 @@ Testing/
 
 # session experiment artifacts (objdump dumps etc.)
 tmp/
+
+# host platform dumps
+Platforms/Host/out/
 
 # local notes
 TODO.md
