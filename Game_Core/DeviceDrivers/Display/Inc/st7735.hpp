@@ -219,7 +219,7 @@ public:
             { PW_CR4, 2, {0x8A, 0x2A} },
             { PW_CR5, 2, {0x8A, 0xEE} },
             { VM_CR,  1, {0x0E} },
-            { INV_COL, 0 },
+            { INV_COL, 0, {} },
             { MAD_CTL, 1, {mad_ctl} },
             { COL_MOD, 1, {COL_565} },
             { CA_SET,  4, {0, 0, 0, (uint8_t)(geo.w - 1)} },
