@@ -214,9 +214,9 @@ public:
                 0x44, 0x51, 0x2F, 0x1F, 0x1F, 0x20, 0x23,
                 }
             },
-            { INV_COL, 0 },
+            { INV_COL, 0, {} },
             { SLP_OUT, 255, {120} },
-            { NORM_ON, 0 },
+            { NORM_ON, 0, {} },
             { DISP_ON, 255, {50} },
         };
 

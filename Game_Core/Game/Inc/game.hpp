@@ -74,9 +74,6 @@ private:
      * driver's print path is static, no per-object state). */
     LcdT& disp;
 
-    /* Frame counter of this Game instance; per-instance pacing. */
-    int game_i = 0;
-
     /* True if a live tank sits too close to the spawn point. */
     static bool is_booked(const point_t &pt, const Tank<LcdT> &tank);
 
@@ -215,11 +212,6 @@ void GameT<LcdT>::resolve_collision(Shell<LcdT> &shell, Tank<LcdT> &tank)
 template <Disp LcdT>
 void GameT<LcdT>::loop()
 {
-  ++game_i;
-
-  if (game_i > 9 * 5)
-    game_i = 0;
-
   spawn();
 
   /* The tank lobby header is read once for the whole sim phase: no

@@ -82,7 +82,12 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  /* Flash prefetch: 84 MHz from HSI-PLL requires 2 WS; with the
+   * prefetch buffer enabled the 32-bit flash line streams ahead of
+   * the fetch so sequential code (the boot init and the frame loop)
+   * is not slowed by the wait states. Off by default in HAL_Init -
+   * the fallback is the matching DISABLE line. */
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
   /* USER CODE END Init */
 
   /* Configure the system clock */
