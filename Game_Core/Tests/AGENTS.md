@@ -36,15 +36,20 @@ swap/флаг, офф-бай-один, условие `nullptr`. Выжил му
 
 ## Состав и ловушки
 
-- `test_lobby.cpp` — сетка пула `Lobby` (20 кейсов). Новый модуль
-  ядра — `test_<module>.cpp` + `add_executable`/`add_test` строка в
-  `CMakeLists.txt` (хост-сборка включает `Game/Src/assets.cpp`, когда
-  тест инстанцирует `GameT`).
+- `test_lobby.cpp` — сетка пула `Lobby` (20 кейсов); `test_map.cpp` —
+  сетка карты (17 кейсов, обе панели-формы). Двойник `fake_lcd.hpp` —
+  записывающая панель под `Disp` (статический журнал blit'ов; журнал
+  накапливает — `reset()` перед каждой фазой чтения). Новый модуль
+  ядра — `test_<module>.cpp` + строка `core_test(...)` в
+  `CMakeLists.txt` (ассеты линкуются каждому таргету).
 - doctest: `CHECK`/`REQUIRE` не принимают `&&` («Expression Too
   Complex») — разбивать на отдельные проверки.
 - mingw-w64 gcc без libasan: собирать с `-D TESTS_SANITIZERS=OFF`
   (опция OFF по умолчанию); на тулчейне с санитайзерами — включать.
 - `-static` обязателен: чужой `libstdc++-6.dll` в PATH ловит
   STATUS_ENTRYPOINT_NOT_FOUND (как в Platforms/Host).
+- Санитайзер-зависимые кейсы: мутант wrap'а (`map_at_wraps`) на mingw
+  выжил — тихое OOB-чтение совпало по значению; на тулчейне с libasan
+  этот кейс обязан ронять мутанта (ADR-0009).
 - Кейс-переименование папок (tests → Tests) в один шаг Windows не
   даёт — через временное имя.

@@ -36,8 +36,8 @@ flash-спрайты), `config.hpp` (`cfg::` ручки), `point.hpp`.
    `dirty`) → shell-tank resolve → book умерших.
 5. `map.flush_destroyed()` — repaint снесённого кирпича, до любых print.
 6. Lull-проходы (shells, затем tanks) — трупы выталкиваются, пулы сжимаются.
-7. Draw-проходы: print'ы танков и снарядов (+ `bush_book` каждого).
-8. `map.bush_flush()` — маска кустов последним blit кадра; затем
+7. Draw-проходы: print'ы танков и снарядов (+ `tile_touch` каждого).
+8. `map.tile_flush()` — тайловая маска последним blit кадра; затем
    `disp.unselect()`.
 
 ## Инварианты и ловушки
