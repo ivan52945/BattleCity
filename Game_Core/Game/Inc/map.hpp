@@ -353,13 +353,15 @@ bool MapT<LcdT>::hit(const int x, const int y, const int w, const int h)
                 {
                     const int idx = r * cols + c;
 
+                    /* a downed brick is emptiness: no second kill */
                     if (!bit_get(destroyed, idx))
                     {
                         bit_set(destroyed, idx);
                         bit_set(dirty, idx);
+
+                        dead = true;
                     }
 
-                    dead = true;
                     break;
                 }
                 default:

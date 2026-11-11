@@ -199,6 +199,18 @@ TEST_CASE("hit_brick_destroys")
     CHECK(map.brick_down(r, c));
 }
 
+TEST_CASE("hit_downed_brick_passes")
+{
+    MapT<Lcd240> map;
+    int r, c;
+    REQUIRE(first_cell_of(r, c, MAP_BRICK));
+
+    (void)map.hit(c * CELL, r * CELL, CELL, CELL);
+    /* the downed brick is emptiness for the next shell - the mutant
+     * target is the old "dead on any brick cell" behavior */
+    CHECK_FALSE(map.hit(c * CELL, r * CELL, CELL, CELL));
+}
+
 TEST_CASE("hit_water_and_empty_pass")
 {
     MapT<Lcd240> map;
