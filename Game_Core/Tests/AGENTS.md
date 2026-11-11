@@ -3,7 +3,9 @@
 doctest (vendored header, `doctest/doctest.h`), standalone CMake-проект:
 платформенные пресеты не задевает. `cmake --build` гоняет тесты сам
 (POST_BUILD) — упавший кейс роняет сборку; `ctest --test-dir Tests/build
---output-on-failure` — точечный прогон и будущий CI. Первый запуск:
+--output-on-failure` — точечный прогон и CI (GitHub Actions: ubuntu
++ gcc, санитайзеры ON — там libasan есть, санитайзер-зависимые кейсы
+ловят жёстко). Первый запуск:
 
 ```
 cmake -S Game_Core/Tests -B Game_Core/Tests/build -G Ninja

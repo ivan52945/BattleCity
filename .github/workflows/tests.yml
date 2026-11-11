@@ -1,0 +1,32 @@
+# The CI gate of the core: the unit grid under ASan/UBSan + ctest.
+# gcc over clang: libasan is guaranteed to ship with gcc, the
+# sanitizer-dependent cases (the wrap mutant of the map, the pool
+# boundary) must die hard here. The golden-frame gate stays LOCAL
+# (Windows): the seeded battle binds to the libc rand() stream,
+# which differs across platforms - a linux golden run would break
+# against windows-generated baselines.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Configure (gcc, sanitizers on)
+        run: >
+          cmake -S Game_Core/Tests -B Game_Core/Tests/build -G Ninja
+          -D TESTS_SANITIZERS=ON
+
+      - name: Build (POST_BUILD runs every suite)
+        run: cmake --build Game_Core/Tests/build
+
+      - name: ctest
+        run: ctest --test-dir Game_Core/Tests/build --output-on-failure

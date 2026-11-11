@@ -25,6 +25,9 @@ cmake --build --preset Release
 Размеры прошивок печатает линкер (`--print-memory-usage`). Актуальные
 базлайны и методика замеров — `docs/metrics.md`.
 
+Юнит-сетка ядра (`Game_Core/Tests/`) гоняется в CI на каждый push
+(GitHub Actions: ubuntu + gcc + ctest под санитайзерами).
+
 ## Структура
 
 ```
