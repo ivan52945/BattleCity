@@ -46,6 +46,9 @@ function(core_test name)
         COMMAND $<TARGET_FILE:${name}>)
 endfunction()
 
+enable_testing()
+
 core_test(test_lobby)  # the Lobby<T, N> pool suite
 core_test(test_map)    # the MapT<LcdT> terrain suite
 core_test(test_tank)   # the Tank<LcdT> suite
+core_test(test_shell)  # the Shell<LcdT> suite

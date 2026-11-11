@@ -14,28 +14,16 @@
 
 #include "fake_lcd.hpp"
 
+#include "probes.hpp"
+
 namespace {
 
-using Lcd240 = FakeLcd<240, 240>; /* the F401 form - the whole map */
-using Lcd160 = FakeLcd<160, 80>;  /* the H743 form - the center crop */
+using Lcd240 = probes::Lcd240;
+using Lcd160 = FakeLcd<160, 80>; /* the H743 form - the center crop */
 
 constexpr int CELL = MapT<Lcd240>::cell; /* the map cell, px */
 
-/* First cell of the given kind on the 240x240 form (panel == the
- * authored map there): the known-answer scan for per-cell tables. */
-bool first_cell_of(int& r, int& c, map_cell_t kind)
-{
-    using Map = MapT<Lcd240>;
-    for (int rr = 0; rr < Map::rows; ++rr)
-        for (int cc = 0; cc < Map::cols; ++cc)
-            if (Map::at(rr, cc) == kind)
-            {
-                r = rr;
-                c = cc;
-                return true;
-            }
-    return false;
-}
+using probes::first_cell_of;
 
 } /* namespace */
 
