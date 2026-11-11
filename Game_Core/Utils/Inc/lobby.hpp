@@ -1,8 +1,19 @@
 #pragma once
+
 #include <cstddef>
 #include <cstdint>
 #include <utility> /* std::swap */
 
+/** \brief The reuse pool of fixed capacity.
+ *
+ *  \tparam T the pooled entity type - reconfigured in place on reuse,
+ *            never reconstructed: no constructors/destructors involved
+ *  \tparam N the pool capacity, compile-time
+ *
+ *  The usage contract (activation window, reservation discipline,
+ *  lull semantics, counter invariants) lives in Utils/README.md - the
+ *  module's single contract home.
+ */
 template <typename T, int N>
 class Lobby
 {

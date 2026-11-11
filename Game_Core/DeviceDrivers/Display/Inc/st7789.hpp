@@ -3,16 +3,18 @@
 #include "main.h"
 #include <cstdint>
 
-/* The docking point: the driver plugs in as the typed display of the
- * Game Core - GameT<Tank<LcdT>> with LcdT = this exact instantiation
- * dials the members below directly, no interface idiom in between.
+/** \brief The docking point: the driver plugs in as the typed
+ *  display of the Game Core - GameT<Tank<LcdT>> with LcdT = this
+ *  exact instantiation dials the members below directly, no interface
+ *  idiom in between.
  *
- * The driver streams the panel directly from caller-owned sources:
- * no framebuffer, no scratch, no generated patterns at runtime. The
- * boot clear is a flash strip asset (CLEAR_IMG below) blitted in
- * per-instance row blocks; everything else on the panel is a caller
- * print() of some const array. */
+ *  The driver streams the panel directly from caller-owned sources:
+ *  no framebuffer, no scratch, no generated patterns at runtime. The
+ *  boot clear is a flash strip asset (CLEAR_IMG below) blitted in
+ *  per-instance row blocks; everything else on the panel is a caller
+ *  print() of some const array. */
 
+/** \brief The panel RAM offset table variants. */
 enum st7789_sizes {
     st_240x320,
     st_240x240,
@@ -51,8 +53,8 @@ typedef struct  {
 
 #define INV_COL   INV__ON
 
-/* Wiring of a concrete display module to the SPI bus - as the template
- * parameter list. There is no wiring struct anymore: every constant of
+/** \brief Wiring of a concrete display module to the SPI bus - the
+ *  class template parameter list. There is no wiring struct anymore: every constant of
  * the wiring is a non-type template argument the compiler stamps into
  * the transaction bodies, and the driver object carries no wiring
  * fields at all - no state of any kind. A line the module does
@@ -109,9 +111,11 @@ public:
         uint32_t y_s;
     };
 
-    /* The window offset table of the configured size. The XY swap
-     * (MV): w/h and the offsets exchange in compile time - the init()
-     * command table stays fully constexpr. */
+    /** \brief The window offset table of the configured size. The XY
+     *  swap (MV): w/h and the offsets exchange in compile time - the
+     *  init() command table stays fully constexpr.
+     *
+     *  \return the geometry of the configured size */
     static constexpr geometry make_geo()
     {
         geometry g = {.w = 0, .h = 0, .x_s = 0, .y_s = 0};
@@ -147,8 +151,8 @@ public:
         return g;
     }
 
-    /* The panel geometry of this instantiation - a compile-time
-     * constant. */
+    /** \brief The panel geometry of this instantiation - a
+     *  compile-time constant. */
     static constexpr geometry geo = make_geo();
 
     /* The boot clear covers the panel with strips: the strip height
@@ -165,7 +169,10 @@ public:
     static GPIO_TypeDef* cs_port()  { return (GPIO_TypeDef*)CS_ADDR; }
     static GPIO_TypeDef* rst_port() { return (GPIO_TypeDef*)RST_ADDR; }
 
-    /* Lifecycle. */
+    /** \brief Lifecycle: the hardware reset pulse (when wired), the
+     *  constexpr init command table, the boot clear run down the
+     *  panel in row blocks, the drawing cycle closed by
+     *  unselect(). */
     void init()
     {
         //  Hardware reset pulse of the panel: MX_GPIO_Init leaves RES low,
@@ -249,15 +256,22 @@ public:
         unselect();
     }
 
-    /* Static blit: no per-object state anywhere on the print path
-     * (the transaction chain is wired by the template arguments), so
-     * Entity dials the type directly and the per-slot display pointer
-     * of the core is gone. This is the whole drawing surface of the
-     * driver: set the window, stream the caller's pixels - flash
-     * assets, LVGL-style RAM buffers, anything - as long as the source is
-     * contiguous over w x h. noinline keeps each core call site one
-     * 'bl' - the inlined SetWindow+DMA body (~300 B) would replicate
-     * in every print/clear site otherwise. */
+    /** \brief Static blit: the whole drawing surface of the driver -
+     *  set the window, stream the caller's pixels (flash assets,
+     *  LVGL-style RAM buffers, anything contiguous over w x h).
+     *
+     *  No per-object state anywhere on the print path (the
+     *  transaction chain is wired by the template arguments), so
+     *  Entity dials the type directly and the per-slot display
+     *  pointer of the core is gone. noinline keeps each core call
+     *  site one 'bl' - the inlined SetWindow+DMA body (~300 B) would
+     *  replicate in every print/clear site otherwise.
+     *
+     *  \param x   window left, px
+     *  \param y   window top, px
+     *  \param w   window width, px
+     *  \param h   window height, px
+     *  \param img contiguous RGB565 source, w*h entries */
     __attribute__((noinline)) static void print(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t img[])
     {
         ST7789_SetWindow(x, y, x + w - 1, y + h - 1);
@@ -265,14 +279,12 @@ public:
         ST7789_BigDAT(reinterpret_cast<const uint8_t *>(&img[0]), w * h * 2);
     }
 
-    /* User-led CS control: the driver never touches the line inside
-     * its transactions - the GameT drawing cycles call select()/
-     * unselect() around every frame, and only on a shared bus
-     * (the device is not the only one) the pin is actually driven.
-     * single_device bus: picked once in init(), both methods are pure
-     * no-ops afterwards. No cs_* wiring - no-ops as well. init() runs
-     * its own cycle. No CS and/or single-device instantiations fold
-     * into empty bodies here. */
+    /** \brief User-led CS control: the driver never touches the line
+     *  inside its transactions - the GameT drawing cycles call
+     *  select()/unselect() around every frame, and only on a shared
+     *  bus the pin is actually driven. single_device bus: picked
+     *  once in init(), both methods are pure no-ops afterwards. No
+     *  cs_* wiring - no-ops as well. init() runs its own cycle. */
     void select() const
     {
         if (CS_ADDR && !SINGLE)
@@ -285,9 +297,9 @@ public:
             HAL_GPIO_WritePin(cs_port(), CS_PIN, GPIO_PIN_SET);
     }
 
-    /* Geometry is a compile-time constant of the instantiation
-     * (constexpr static - the Game folds the field edges and the
-     * spawn ladder from these at compile time). */
+    /** \brief The panel geometry: a compile-time constant of the
+     *  instantiation (constexpr static - the Game folds the field
+     *  edges and the spawn ladder from these at compile time). */
     static constexpr uint16_t w()  { return (uint16_t)geo.w; }
     static constexpr uint16_t h() { return (uint16_t)geo.h; }
 

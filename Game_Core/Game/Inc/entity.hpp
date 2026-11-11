@@ -5,24 +5,31 @@
 /* Sprite data of the pool: flash-resident const arrays (assets.cpp). */
 #include <assets.hpp>
 
-/* Direction of an entity: which way it looks/moves on the panel.
- * UP(0) vs DOWN(2), RIGHT(1) vs LEFT(3) - opposite pairs for
- * the `(dir ± 2)` collision logic. */
+/** \brief Direction of an entity: which way it looks/moves on the
+ *  panel.
+ *
+ *  UP(0) vs DOWN(2), RIGHT(1) vs LEFT(3) - opposite pairs for
+ *  the `(dir ± 2)` collision logic. */
 enum side_t {
   UP, RIGHT, DOWN, LEFT,
 };
 
+/** \brief The per-frame action outcome: KIL, ROTATE, MOVE, BLOCK. */
 enum act_t {
   KIL, ROTATE, MOVE, BLOCK,
 };
 
-/* The docking point: the Game Core is typed against the concrete
- * (final) driver class. The blit path calls the driver's static
- * print without any object or pointer - the transaction chain of
- * the wiring carries no per-object state, so the panel identity lives
- * in the type alone. Lifecycle (init/select/unselect) goes to the one
- * driver object held by the Game. No display header is included
- * here: the type travels with the Game into main(). */
+/** \brief The blit-path base of the pooled entities.
+ *
+ *  \tparam LcdT the concrete (final) driver class the Game is typed
+ *               against
+ *
+ *  The blit path calls the driver's static print without any object
+ *  or pointer - the transaction chain of the wiring carries no
+ *  per-object state, so the panel identity lives in the type alone.
+ *  Lifecycle (init/select/unselect) goes to the one driver object
+ *  held by the Game. No display header is included here: the type
+ *  travels with the Game into main(). */
 template <class LcdT>
 class Entity
 {
@@ -32,7 +39,8 @@ public:
   int dir;
   int side;
   const int w;
-  /* Points to flash-resident sprite data (const arrays in assets.cpp). */
+
+  /// Points to flash-resident sprite data (const arrays in assets.cpp).
   const uint16_t* frame;
   const int speed;
   const int h;
@@ -42,10 +50,18 @@ public:
 
   Entity(int x, int y, int w, int h, int speed, int dir, act_t act, int side);
 
+  /** \brief Re-orients the oriented sprite extents (w_img/h_img) by
+   *  the current dir. */
   void updateImageWH();
 
+  /** \brief The frame print: the trail erase (when action == MOVE)
+   *  plus the sprite blit. BLOCK contract: clipped coordinates do
+   *  not draw. */
   void print() const;
 
+  /** \brief Erase the rect where the screen actually holds the
+   *  sprite (walks back the frame's net displacement; see the body
+   *  comment for the ghost-line history). */
   void clear() const;
 
   ~Entity();

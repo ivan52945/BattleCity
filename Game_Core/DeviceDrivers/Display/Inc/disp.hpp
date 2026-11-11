@@ -3,28 +3,31 @@
 #include <cstdint>
 #include <concepts>
 
-/* The docking contract of the Game Core - as a compile-time concept.
+/** \brief The docking contract of the Game Core - as a compile-time
+ *  concept.
  *
- * The shape is asymmetric by design and mirrors what the drivers
- * actually are:
+ *  The shape is asymmetric by design and mirrors what the drivers
+ *  actually are:
  *
- *   - The blit path (print) carries no per-object state anywhere
- *     (the transaction chain is fully parameterized by the wiring
- *     template arguments; the driver holds no buffers at all), so it
- *     is required as a STATIC member: Entity calls it with no object
- *     and no pointer, and the per-slot display pointer of the game
- *     core disappears with the stack it was costing.
+ *  - The blit path (print) carries no per-object state anywhere
+ *    (the transaction chain is fully parameterized by the wiring
+ *    template arguments; the driver holds no buffers at all), so it
+ *    is required as a STATIC member: Entity calls it with no object
+ *    and no pointer, and the per-slot display pointer of the game
+ *    core disappears with the stack it was costing.
  *
- *   - Lifecycle and bus picking (init/select/unselect) act on the one
- *     concrete driver object the platform main() created, so they are
- *     required as instance members; GameT holds a reference to it.
+ *  - Lifecycle and bus picking (init/select/unselect) act on the one
+ *    concrete driver object the platform main() created, so they are
+ *    required as instance members; GameT holds a reference to it.
  *
- *   - Geometry (w/h) is a compile-time constant of the instantiation
- *     (static constexpr geo through make_geo), required static.
+ *  - Geometry (w/h) is a compile-time constant of the instantiation
+ *    (static constexpr geo through make_geo), required static.
  *
- * A driver qualifies by having exactly this API; a violating shape
- * fails right at the GameT instantiation point, not at three call
- * sites nearer the target.
+ *  A driver qualifies by having exactly this API; a violating shape
+ *  fails right at the GameT instantiation point, not at three call
+ *  sites nearer the target.
+ *
+ *  \tparam LcdT the driver type checked against the shape
  */
 template <class LcdT>
 concept Disp = requires(LcdT& lcd, uint16_t x, uint16_t y,

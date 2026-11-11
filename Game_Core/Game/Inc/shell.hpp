@@ -6,8 +6,11 @@
 
 #define SHELL_LENGTH 3
 
-/* The projectile of one Game: no own display fantasy, the blit path
- * runs through the typed driver of the owning Entity<LcdT>. */
+/** \brief The projectile of one Game: no own display fantasy, the
+ *  blit path runs through the typed driver of the owning
+ *  Entity<LcdT>.
+ *
+ *  \tparam LcdT the driver type of the owning Game */
 template <class LcdT>
 class Shell final : public Entity<LcdT> {
 public:
@@ -26,10 +29,27 @@ public:
 
   Shell(int x, int y, int dir, int side);
 
+  /** \brief The flight step: one speed-px along dir; the field edge
+   *  clamp kills, the terrain hit (map.hit) kills.
+   *
+   *  \param fld_x_end the field right edge, px (inclusive)
+   *  \param fld_y_end the field bottom edge, px (inclusive)
+   *  \param map       the terrain of the owning Game */
   void move(int fld_x_end, int fld_y_end, MapT<LcdT> &map);
+
+  /** \brief The flight tick: move() and, on death, the rect wipe. */
   void update(int fld_x_end, int fld_y_end, MapT<LcdT> &map);
 
+  /** \brief Arm the shell at the point: position, direction, side,
+   *  life=true.
+   *
+   *  \param x    muzzle x, px
+   *  \param y    muzzle y, px
+   *  \param dir  flight direction
+   *  \param side owning side */
   void get_out(int x, int y, int dir, int side);
+
+  /** \brief Kill the shell and wipe its rect. */
   void explode();
 };
 
