@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 #include "disp.hpp"
@@ -24,9 +25,9 @@ public:
         const uint16_t* img;
     };
 
-    void init() { initialized = true; }
-    void select() const {}
-    void unselect() const {}
+    void init() { initialized = true; events.push_back({'i', log.size()}); }
+    void select() const { events.push_back({'s', log.size()}); }
+    void unselect() const { events.push_back({'u', log.size()}); }
 
     static void print(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
                       const uint16_t img[])
@@ -40,10 +41,15 @@ public:
     static void reset()
     {
         log.clear();
+        events.clear();
         initialized = false;
     }
 
+    /* The blit log and the lifecycle timeline: each event carries the
+     * blit count at the moment it fired, so the test can verify what
+     * was blitted inside which (select .. unselect) window. */
     static std::vector<Blit> log;
+    static std::vector<std::pair<char, size_t>> events;
     static bool initialized;
 };
 
@@ -52,3 +58,6 @@ bool FakeLcd<W, H>::initialized = false;
 
 template <uint16_t W, uint16_t H>
 std::vector<typename FakeLcd<W, H>::Blit> FakeLcd<W, H>::log;
+
+template <uint16_t W, uint16_t H>
+std::vector<std::pair<char, size_t>> FakeLcd<W, H>::events;

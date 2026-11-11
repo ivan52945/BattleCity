@@ -52,3 +52,4 @@ core_test(test_lobby)  # the Lobby<T, N> pool suite
 core_test(test_map)    # the MapT<LcdT> terrain suite
 core_test(test_tank)   # the Tank<LcdT> suite
 core_test(test_shell)  # the Shell<LcdT> suite
+core_test(test_game)   # the GameT<LcdT> orchestrator suite
