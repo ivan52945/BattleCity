@@ -10,10 +10,10 @@
 #include "map.hpp"
 #include "config.hpp"
 
-/** \brief The Game template: one instance rides one concrete driver
+/** @brief The Game template: one instance rides one concrete driver
  *  class.
  *
- *  \tparam LcdT the driver type of this Game
+ *  @tparam LcdT the driver type of this Game
  *
  *  The whole chain (GameT<LcdT> -> Lobby<Tank<LcdT>> -> Entity<LcdT> ->
  *  LcdT) carries the panel in the type system; the blit path dials the
@@ -25,20 +25,20 @@
 template <Disp LcdT>
 class GameT {
 public:
-    /** \brief The field edges: a compile-time constant of the driver
+    /** @brief The field edges: a compile-time constant of the driver
      *  instantiation (w()/h() are constexpr static members of the
      *  type) - the loops pass immediates, and the object carries
      *  neither the old ladder nor the two field-end ints. */
     static constexpr int fld_x_end = LcdT::w() - 1;
     static constexpr int fld_y_end = LcdT::h() - 1;
 
-    /** \brief The spawn ladder as a compile-time constexpr table: two
+    /** @brief The spawn ladder as a compile-time constexpr table: two
      *  columns pinned cfg::spawn_margin_px from the field edges, the
      *  slots spread evenly over the height (240px panel: 30..210 by
      *  30 - the same ladder the old init() loop drew).
      *  Flash-resident, not on the object.
      *
-     *  \return the [2][spawn_slots] table of spawn points */
+     *  @return the [2][spawn_slots] table of spawn points */
     static constexpr auto make_spawn_coords()
         -> std::array<std::array<point_t, cfg::spawn_slots>, 2>
     {
@@ -58,7 +58,7 @@ public:
     static constexpr std::array<std::array<point_t, cfg::spawn_slots>, 2>
         spawn_coords = make_spawn_coords();
 
-    /** \brief The tank pool, sized exactly by the single source of
+    /** @brief The tank pool, sized exactly by the single source of
      *  truth - the per-side quota, twice. The active count is capped
      *  at 2 x quota by the spawn guards, and corpse slots are culled
      *  in the closing passes of the same frame, so the pool never
@@ -66,19 +66,19 @@ public:
      *  unreachable and removed. */
     Lobby<Tank<LcdT>, 2 * cfg::units_per_side> tanks;
 
-    /** \brief The shell pool. */
+    /** @brief The shell pool. */
     Lobby<Shell<LcdT>, 96> shells;
 
-    /** \brief The terrain of the field. */
+    /** @brief The terrain of the field. */
     MapT<LcdT> map;
 
-    /** \brief The authored map must leave every spawn hull of this
+    /** @brief The authored map must leave every spawn hull of this
      *  instantiation on passable cells - a solid under the ladder
      *  would freeze a fresh tank in the wall. Folded at compile time
      *  (see MapT::spawn_free): a map edit that blocks a spawn is a
      *  build error of this platform.
      *
-     *  \return true when the whole ladder is spawn-free */
+     *  @return true when the whole ladder is spawn-free */
     static constexpr bool ladder_free()
     {
         for (int s_i = 0; s_i < 2; ++s_i)
@@ -96,11 +96,11 @@ public:
 
     GameT(LcdT& d) : disp(d) {}
 
-    /** \brief The boot: driver lifecycle, then the one map paint
+    /** @brief The boot: driver lifecycle, then the one map paint
      *  (its own drawing cycle). */
     void init();
 
-    /** \brief The frame: spawn, sim phases, the drawing cycle under
+    /** @brief The frame: spawn, sim phases, the drawing cycle under
      *  the CS window, the closing lull and tile passes. One call =
      *  one frame; the pace belongs to the platform. */
     void loop();

@@ -1,6 +1,6 @@
 #pragma once
 
-/** \brief Flash-resident const sprite/asset arrays (defined in
+/** @brief Flash-resident const sprite/asset arrays (defined in
  *  assets.cpp); the entities and drivers reference them by pointer. */
 
 #include <stdint.h>

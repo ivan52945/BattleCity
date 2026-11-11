@@ -7,7 +7,7 @@
 #include "config.hpp"
 #include "disp.hpp"
 
-/** \brief ===== The map: a char grid, one symbol per terrain kind =====
+/** @brief ===== The map: a char grid, one symbol per terrain kind =====
  *
  *  The field is authored as an array of strings (map_layout::rows_txt
  *  below) and a constexpr pass folds it into a flash-resident cell
@@ -33,7 +33,7 @@
  *  error of that platform, not a stuck tank on the field.
  */
 
-/** \brief The terrain kinds of the authored grid (the legend above). */
+/** @brief The terrain kinds of the authored grid (the legend above). */
 enum map_cell_t : uint8_t
 {
     MAP_EMPTY,
@@ -150,11 +150,11 @@ inline constexpr std::array<uint8_t, rows * cols> grid = make_grid();
  * same docking as the Game itself: the blit path dials the static
  * driver print, the panel geometry is a compile-time constant of the
  * instantiation. */
-/** \brief The terrain grid over the panel: constexpr-compiled from
+/** @brief The terrain grid over the panel: constexpr-compiled from
  *  the authored grid, plus the runtime destruction/tile state of the
  *  frame.
  *
- *  \tparam LcdT the driver type of the owning Game */
+ *  @tparam LcdT the driver type of the owning Game */
 template <Disp LcdT>
 class MapT
 {
@@ -178,14 +178,14 @@ public:
     static constexpr int row0 = (map_layout::rows - rows) / 2;
     static constexpr int col0 = (map_layout::cols - cols) / 2;
 
-    /** \brief The cell kind under the panel cell (authored grid
+    /** @brief The cell kind under the panel cell (authored grid
      *  lookup, wrapped: the index runs modulo the authored dims,
      *  negatives corrected - the edges of the authored grid fold
      *  together).
      *
-     *  \param row panel-cell row
-     *  \param col panel-cell column
-     *  \return the terrain kind of the cell */
+     *  @param row panel-cell row
+     *  @param col panel-cell column
+     *  @return the terrain kind of the cell */
     static constexpr map_cell_t at(const int row, const int col)
     {
         int sr = (row + row0) % map_layout::rows;
@@ -197,14 +197,14 @@ public:
         return (map_cell_t)map_layout::grid[sr * map_layout::cols + sc];
     }
 
-    /** \brief The compile-time spawn check: the whole tank hull at
+    /** @brief The compile-time spawn check: the whole tank hull at
      *  the point must sit on passable cells (GameT static_asserts
      *  its whole spawn ladder through this). The ladder margins keep
      *  the hull inside the field - no clamp here.
      *
-     *  \param x hull center x, px
-     *  \param y hull center y, px
-     *  \return true when no hull cell is solid (brick/steel/water) */
+     *  @param x hull center x, px
+     *  @param y hull center y, px
+     *  @return true when no hull cell is solid (brick/steel/water) */
     static constexpr bool spawn_free(const int x, const int y)
     {
         constexpr int hw = TANK_W / 2;
@@ -229,66 +229,66 @@ public:
 
     MapT() = default;
 
-    /** \brief The destruction state of a brick cell (panel coords):
+    /** @brief The destruction state of a brick cell (panel coords):
      *  the tile pass and the collision read the bits internally; this
      *  is the public query form (host checks, future win/lose logic).
      *
-     *  \param r panel-cell row
-     *  \param c panel-cell column
-     *  \return true when the brick cell is destroyed */
+     *  @param r panel-cell row
+     *  @param c panel-cell column
+     *  @return true when the brick cell is destroyed */
     bool brick_down(const int r, const int c) const
     {
         return bit_get(destroyed, r * cols + c);
     }
 
-    /** \brief The boot paint of the whole panel (init, inside the
+    /** @brief The boot paint of the whole panel (init, inside the
      *  drawing cycle): one terrain-sprite blit per non-empty cell
      *  (the emptiness is the background). */
     void draw() const;
 
-    /** \brief Tank movement query: does any solid cell overlap the
+    /** @brief Tank movement query: does any solid cell overlap the
      *  rect? Steel/water block, a whole brick blocks, a downed brick,
      *  bush and emptiness do not. The rect is origin-based (x/y =
      *  the top-left corner, w/h = the extents), the callers shift
      *  their centered hulls; the out-of-field edges clamp in.
      *
-     *  \param x rect left, px
-     *  \param y rect top, px
-     *  \param w rect width, px
-     *  \param h rect height, px
-     *  \return true when a solid cell overlaps the rect */
+     *  @param x rect left, px
+     *  @param y rect top, px
+     *  @param w rect width, px
+     *  @param h rect height, px
+     *  @return true when a solid cell overlaps the rect */
     bool blocks(const int x, const int y, const int w, const int h) const;
 
-    /** \brief Shell impact on the rect: steel kills the shell, water
+    /** @brief Shell impact on the rect: steel kills the shell, water
      *  lets it pass, the whole brick cells under the rect are blown
      *  away (destroyed + dirty - marked for the draw-phase repaint)
      *  and kill it; a downed brick, water and emptiness pass.
      *
-     *  \param x rect left, px
-     *  \param y rect top, px
-     *  \param w rect width, px
-     *  \param h rect height, px
-     *  \return true = the shell dies */
+     *  @param x rect left, px
+     *  @param y rect top, px
+     *  @param w rect width, px
+     *  @param h rect height, px
+     *  @return true = the shell dies */
     bool hit(const int x, const int y, const int w, const int h);
 
-    /** \brief The destroyed-brick repaint: once per frame inside the
+    /** @brief The destroyed-brick repaint: once per frame inside the
      *  drawing cycle (the bits are marked from the sim phase): every
      *  dirty cell blits one clear strip, the dirty bit consumes. */
     void flush_destroyed();
 
-    /** \brief The tile mask, booking side: every tile cell under the
+    /** @brief The tile mask, booking side: every tile cell under the
      *  rect (steel, water, bush, whole brick; a downed brick and
      *  emptiness skip) is booked for the frame's repaint pass,
      *  deduplicated; the book overflow (32) is dropped until the
      *  next frame.
      *
-     *  \param x rect left, px
-     *  \param y rect top, px
-     *  \param w rect width, px
-     *  \param h rect height, px */
+     *  @param x rect left, px
+     *  @param y rect top, px
+     *  @param w rect width, px
+     *  @param h rect height, px */
     void tile_touch(const int x, const int y, const int w, const int h);
 
-    /** \brief The tile mask, repaint side: one terrain-sprite blit
+    /** @brief The tile mask, repaint side: one terrain-sprite blit
      *  per booked cell (a destroyed brick skips - its repaint went
      *  through flush_destroyed), then the book empties. Runs as the
      *  last blit pass of the frame: the drive-under-the-bush hiding

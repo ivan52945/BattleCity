@@ -4,11 +4,11 @@
 #include <cstdint>
 #include <utility> /* std::swap */
 
-/** \brief The reuse pool of fixed capacity.
+/** @brief The reuse pool of fixed capacity.
  *
- *  \tparam T the pooled entity type - reconfigured in place on reuse,
+ *  @tparam T the pooled entity type - reconfigured in place on reuse,
  *            never reconstructed: no constructors/destructors involved
- *  \tparam N the pool capacity, compile-time
+ *  @tparam N the pool capacity, compile-time
  *
  *  The usage contract (activation window, reservation discipline,
  *  lull semantics, counter invariants) lives in Utils/README.md - the

@@ -1,6 +1,6 @@
 #pragma once
 
-/** \brief Gameplay knobs.
+/** @brief Gameplay knobs.
  *
  *  Field geometry is NOT here: the panel size is a compile-time
  *  constant of the driver instantiation (static constexpr w()/h()),

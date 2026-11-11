@@ -3,7 +3,7 @@
 #include "main.h"
 #include <cstdint>
 
-/** \brief The docking point: the driver plugs in as the typed
+/** @brief The docking point: the driver plugs in as the typed
  *  display of the Game Core - GameT<Tank<LcdT>> with LcdT = this
  *  exact instantiation dials the members below directly, no interface
  *  idiom in between.
@@ -14,7 +14,7 @@
  *  per-instance row blocks; everything else on the panel is a caller
  *  print() of some const array. */
 
-/** \brief The panel RAM offset table variants. */
+/** @brief The panel RAM offset table variants. */
 enum st7789_sizes {
     st_240x320,
     st_240x240,
@@ -53,7 +53,7 @@ typedef struct  {
 
 #define INV_COL   INV__ON
 
-/** \brief Wiring of a concrete display module to the SPI bus - the
+/** @brief Wiring of a concrete display module to the SPI bus - the
  *  class template parameter list. There is no wiring struct anymore: every constant of
  * the wiring is a non-type template argument the compiler stamps into
  * the transaction bodies, and the driver object carries no wiring
@@ -111,11 +111,11 @@ public:
         uint32_t y_s;
     };
 
-    /** \brief The window offset table of the configured size. The XY
+    /** @brief The window offset table of the configured size. The XY
      *  swap (MV): w/h and the offsets exchange in compile time - the
      *  init() command table stays fully constexpr.
      *
-     *  \return the geometry of the configured size */
+     *  @return the geometry of the configured size */
     static constexpr geometry make_geo()
     {
         geometry g = {.w = 0, .h = 0, .x_s = 0, .y_s = 0};
@@ -151,7 +151,7 @@ public:
         return g;
     }
 
-    /** \brief The panel geometry of this instantiation - a
+    /** @brief The panel geometry of this instantiation - a
      *  compile-time constant. */
     static constexpr geometry geo = make_geo();
 
@@ -169,7 +169,7 @@ public:
     static GPIO_TypeDef* cs_port()  { return (GPIO_TypeDef*)CS_ADDR; }
     static GPIO_TypeDef* rst_port() { return (GPIO_TypeDef*)RST_ADDR; }
 
-    /** \brief Lifecycle: the hardware reset pulse (when wired), the
+    /** @brief Lifecycle: the hardware reset pulse (when wired), the
      *  constexpr init command table, the boot clear run down the
      *  panel in row blocks, the drawing cycle closed by
      *  unselect(). */
@@ -256,7 +256,7 @@ public:
         unselect();
     }
 
-    /** \brief Static blit: the whole drawing surface of the driver -
+    /** @brief Static blit: the whole drawing surface of the driver -
      *  set the window, stream the caller's pixels (flash assets,
      *  LVGL-style RAM buffers, anything contiguous over w x h).
      *
@@ -267,11 +267,11 @@ public:
      *  site one 'bl' - the inlined SetWindow+DMA body (~300 B) would
      *  replicate in every print/clear site otherwise.
      *
-     *  \param x   window left, px
-     *  \param y   window top, px
-     *  \param w   window width, px
-     *  \param h   window height, px
-     *  \param img contiguous RGB565 source, w*h entries */
+     *  @param x   window left, px
+     *  @param y   window top, px
+     *  @param w   window width, px
+     *  @param h   window height, px
+     *  @param img contiguous RGB565 source, w*h entries */
     __attribute__((noinline)) static void print(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t img[])
     {
         ST7789_SetWindow(x, y, x + w - 1, y + h - 1);
@@ -279,7 +279,7 @@ public:
         ST7789_BigDAT(reinterpret_cast<const uint8_t *>(&img[0]), w * h * 2);
     }
 
-    /** \brief User-led CS control: the driver never touches the line
+    /** @brief User-led CS control: the driver never touches the line
      *  inside its transactions - the GameT drawing cycles call
      *  select()/unselect() around every frame, and only on a shared
      *  bus the pin is actually driven. single_device bus: picked
@@ -297,7 +297,7 @@ public:
             HAL_GPIO_WritePin(cs_port(), CS_PIN, GPIO_PIN_SET);
     }
 
-    /** \brief The panel geometry: a compile-time constant of the
+    /** @brief The panel geometry: a compile-time constant of the
      *  instantiation (constexpr static - the Game folds the field
      *  edges and the spawn ladder from these at compile time). */
     static constexpr uint16_t w()  { return (uint16_t)geo.w; }

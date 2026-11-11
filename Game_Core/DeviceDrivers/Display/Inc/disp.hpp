@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <concepts>
 
-/** \brief The docking contract of the Game Core - as a compile-time
+/** @brief The docking contract of the Game Core - as a compile-time
  *  concept.
  *
  *  The shape is asymmetric by design and mirrors what the drivers
@@ -27,7 +27,7 @@
  *  fails right at the GameT instantiation point, not at three call
  *  sites nearer the target.
  *
- *  \tparam LcdT the driver type checked against the shape
+ *  @tparam LcdT the driver type checked against the shape
  */
 template <class LcdT>
 concept Disp = requires(LcdT& lcd, uint16_t x, uint16_t y,

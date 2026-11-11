@@ -9,10 +9,10 @@
 #define TANK_WIDTH 13
 #define TANK_HEIGHT 13
 
-/** \brief The tank of one Game, typed against the driver of that
+/** @brief The tank of one Game, typed against the driver of that
  *  Game.
  *
- *  \tparam LcdT the driver type of the owning Game
+ *  @tparam LcdT the driver type of the owning Game
  *
  *  The frames are the flash-resident const arrays of assets.cpp
  *  (ally/enemy sets), the pointer to the active frame travels through
@@ -51,58 +51,58 @@ public:
 
   Tank(int x, int y, int dir, int side);
 
-  /** \brief The movement step: one speed-px along dir. The field
+  /** @brief The movement step: one speed-px along dir. The field
    *  edge clamps (BLOCK), a step onto a blocking cell reverts whole
    *  (BLOCK) - net zero, no ghost trail. Animates the frame.
    *
-   *  \param fld_x_end the field right edge, px (inclusive)
-   *  \param fld_y_end the field bottom edge, px (inclusive)
-   *  \param map       the terrain of the owning Game */
+   *  @param fld_x_end the field right edge, px (inclusive)
+   *  @param fld_y_end the field bottom edge, px (inclusive)
+   *  @param map       the terrain of the owning Game */
   void move(int fld_x_end, int fld_y_end, MapT<LcdT> &map);
 
-  /** \brief The AI tick: the direction pump (probabilistic rotate
+  /** @brief The AI tick: the direction pump (probabilistic rotate
    *  or cooldown halving), then move(), then the fire roll
    *  (probabilistic shot_st, cooldown halving on miss). */
   void update(int fld_x_end, int fld_y_end, MapT<LcdT> &map);
 
-  /** \brief Poll and consume the shot flag: one true poll = one
+  /** @brief Poll and consume the shot flag: one true poll = one
    *  released shot. The muzzle point (the hull edge against dir) is
    *  captured for shot(); a muzzle outside the field rejects the
    *  shot (the flag is consumed either way).
    *
-   *  \return true when the shot was released */
+   *  @return true when the shot was released */
   bool isShot(const int fld_x_end, const int fld_y_end);
 
-  /** \brief The push-back: one speed-px against dir. The push never
+  /** @brief The push-back: one speed-px against dir. The push never
    *  buries the hull in a map wall - the wall face eats the push.
    *  No print.
    *
-   *  \param stuck book the BLOCK action (stuck_cnt capped at 10) */
+   *  @param stuck book the BLOCK action (stuck_cnt capped at 10) */
   void back(bool stuck, MapT<LcdT> &map);
 
-  /** \brief Hand the shell out of the muzzle captured by the last
+  /** @brief Hand the shell out of the muzzle captured by the last
    *  isShot poll. */
   void shot(Shell<LcdT> &shell) const;
 
   void setSide(int side);
 
-  /** \brief The death report: at life == 0 wipe the sprite rect
+  /** @brief The death report: at life == 0 wipe the sprite rect
    *  (clear) and answer true, otherwise just answer false.
    *
-   *  \return true when the tank went down for good */
+   *  @return true when the tank went down for good */
   bool kill() const;
 
-  /** \brief Turn the tank: dir = new_dir % 4 (the caller passes
+  /** @brief Turn the tank: dir = new_dir % 4 (the caller passes
    *  new_dir >= 0); the frame buffer redirects, action = ROTATE. */
   void rotate(int new_dir = 0);
 
-  /** \brief Reconfigure the slot for a fresh tank: life = 2, the
+  /** @brief Reconfigure the slot for a fresh tank: life = 2, the
    *  position, cooldowns and stuck counter zeroed, dir set by the
    *  side (0 -> 1, 1 -> 3), the frame set re-pointed.
    *
-   *  \param x    spawn x, px (hull center)
-   *  \param y    spawn y, px (hull center)
-   *  \param side owning side */
+   *  @param x    spawn x, px (hull center)
+   *  @param y    spawn y, px (hull center)
+   *  @param side owning side */
   void respawn(int x, int y, int side);
 };
 
