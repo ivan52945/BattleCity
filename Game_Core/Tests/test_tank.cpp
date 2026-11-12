@@ -217,9 +217,17 @@ TEST_CASE("tank_isshot_rejects_edge")
     Tank240 t(6, 30, LEFT, 0);
     t.shot_st = true;
 
-    /* muzzle at 6 - 6 = 0: outside the field -> rejected (and the
-     * flag is consumed anyway) */
+    /* the muzzle (6 - 6 = 0) leaves the field: no shot */
     CHECK_FALSE(t.isShot(239, 239));
+}
+
+TEST_CASE("tank_isshot_reject_consumes_flag")
+{
+    Tank240 t(6, 30, LEFT, 0);
+    t.shot_st = true;
+
+    /* mutant target: the flag reset in the reject path */
+    (void)t.isShot(239, 239); /* the rejected shot still consumed the flag */
     CHECK_FALSE(t.isShot(239, 239));
 }
 

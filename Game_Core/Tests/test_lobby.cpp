@@ -131,7 +131,8 @@ TEST_CASE("sleep_hands_tail_until_activated")
     Node* first = p.sleep();
     REQUIRE(first != nullptr);
 
-    /* резервы не накапливаются: до activate() выдаётся тот же слот */
+    /* reserves do not accumulate: until activate() the same slot
+     * is handed out */
     Node* second = p.sleep();
     REQUIRE(second != nullptr);
     CHECK(second == first);
@@ -141,7 +142,7 @@ TEST_CASE("sleep_hands_tail_until_activated")
     CHECK(activated == first);
     CHECK(p.active_n() == 1);
 
-    /* после активации выдаётся следующий хвостовой слот */
+    /* after activation the next tail slot is handed out */
     Node* next_free = p.sleep();
     REQUIRE(next_free != nullptr);
     CHECK(next_free != first);
